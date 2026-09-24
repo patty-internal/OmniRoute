@@ -125,6 +125,18 @@ jobs:
           mkdir -p ci-builder/app/.build/next ci-builder/app/node_modules ci-builder/app/scripts/dev
           cp -a .build/next/standalone ci-builder/app/.build/next/standalone
           cp -a node_modules/better-sqlite3 node_modules/playwright node_modules/playwright-core ci-builder/app/node_modules/
+          # The gyp-built native lands in the STANDALONE tree during npm run
+          # build; runner-base's `test -f build/Release/better_sqlite3.node`
+          # checks the node_modules copy — mirror it there (fall back to the
+          # prebuilt linux binary when host gyp didn't produce one).
+          if [ -f .build/next/standalone/node_modules/better-sqlite3/build/Release/better_sqlite3.node ]; then
+            mkdir -p ci-builder/app/node_modules/better-sqlite3/build/Release
+            cp -a .build/next/standalone/node_modules/better-sqlite3/build/Release/better_sqlite3.node ci-builder/app/node_modules/better-sqlite3/build/Release/
+          elif [ -f ci-builder/app/node_modules/better-sqlite3/prebuilds/linux-x64.node ]; then
+            mkdir -p ci-builder/app/node_modules/better-sqlite3/build/Release
+            cp -a ci-builder/app/node_modules/better-sqlite3/prebuilds/linux-x64.node ci-builder/app/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+          fi
+          test -f ci-builder/app/node_modules/better-sqlite3/build/Release/better_sqlite3.node
           cp -a scripts/dev/healthcheck.mjs ci-builder/app/scripts/dev/healthcheck.mjs
           du -sh ci-builder
 
