@@ -73,11 +73,7 @@ import {
 } from "./chatCore/headers.ts";
 import { markCodexScopeRateLimited } from "./chatCore/codexFailover.ts";
 import { getCodexClientSessionId, isCodexOriginatedHeaders } from "../config/codexIdentity.ts";
-import {
-  getCodexClientSessionId,
-  isCodexOriginatedHeaders,
-  isClaudeCodeOriginatedHeaders,
-} from "../config/codexIdentity.ts";
+import { isClaudeCodeOriginatedHeaders } from "../config/codexIdentity.ts";
 import {
   noteCodexTurnStateProvenance,
   readCodexTurnStateHeader,
@@ -108,7 +104,7 @@ import {
   followUpLegInput,
 } from "./chatCore/serverOwnedToolLoopWire.ts";
 import { finalizeToolLoopError } from "./chatCore/nonStreamingFinalization.ts";
-import { markCodexScopeRateLimited } from "./chatCore/codexFailover.ts";
+
 import { deleteSessionAccountAffinity } from "@/lib/db/sessionAccountAffinity";
 import {
   buildStreamingResponseHeaders,
@@ -131,7 +127,7 @@ export {
   stripStaleForwardingHeaders,
 };
 import { resolveMemoryOwnerId } from "./chatCore/memoryExtraction.ts";
-import { resolveMemoryOwnerId, runMemoryExtractionGate } from "./chatCore/memoryExtraction.ts";
+import { runMemoryExtractionGate } from "./chatCore/memoryExtraction.ts";
 import { checkResourcePressureGuard } from "../utils/resourcePressure.ts";
 import { normalizeHeaders } from "../utils/headers.ts";
 import { resolveChatCoreRequestFormat } from "./chatCore/requestFormat.ts";
@@ -164,7 +160,7 @@ import { hasActiveClaudeThinking } from "../utils/thinkingBudget.ts";
 import { createStreamController } from "../utils/streamHandler.ts";
 import * as streamFailure from "../utils/streamFailureFinalization.ts";
 import { normalizeUsage } from "../utils/usageTracking.ts";
-import { normalizeUsage } from "../utils/usageTracking.ts";
+
 import {
   refreshWithRetry,
   isUnrecoverableRefreshError,
@@ -194,8 +190,7 @@ import {
 } from "@/lib/modelCapabilities.ts";
 import { collectCustomToolNamesForSourceFormat } from "../translator/request/openai-responses/additionalTools.ts";
 import { buildCodexQuotaPersistence } from "./chatCore/codexQuota.ts";
-import { enforceOutputTokenBudget } from "./chatCore/outputTokenBudget.ts";
-import { recoverAnthropicThinkingSignature } from "./chatCore/thinkingSignatureRecovery.ts";
+
 import { generateSessionId } from "../services/sessionManager.ts";
 import { prepareWebFetchFallbackBody } from "../services/webFetchInterception.ts";
 import type { CompressionResult } from "../services/compression/types.ts";
@@ -228,11 +223,7 @@ import {
   sanitizeUpstreamDetails,
 } from "../utils/error.ts";
 import { reportMalformed200, detectMalformedNonStream } from "../utils/diagnostics.ts";
-import {
-  reportMalformed200,
-  detectMalformedNonStream,
-  describeMalformedNonStream,
-} from "../utils/diagnostics.ts";
+import { describeMalformedNonStream } from "../utils/diagnostics.ts";
 import { checkTokenLimits } from "@omniroute/open-sse/services/tokenLimitCounter.ts";
 import {
   COOLDOWN_MS,
@@ -339,8 +330,8 @@ import { scheduleStreamingQuotaShareConsumption } from "./chatCore/streamingQuot
 import { recordStreamingUsageStats } from "./chatCore/streamingUsageStats.ts";
 import { recordStreamingCost } from "./chatCore/streamingCost.ts";
 import { isJsonRecord } from "./chatCore/nonStreamingResponseParse.ts";
-import { recordStreamingCost, buildStreamLedgerDetails } from "./chatCore/streamingCost.ts";
-import { isJsonRecord } from "./chatCore/nonStreamingResponseParse.ts";
+import { buildStreamLedgerDetails } from "./chatCore/streamingCost.ts";
+
 import { recordNonStreamingUsageStats } from "./chatCore/nonStreamingUsageStats.ts";
 import {
   normalizeExecutorResult,
@@ -388,8 +379,6 @@ import {
 } from "../services/accountSemaphore.ts";
 import { lockModel, lockModelIfPerModelQuota } from "../services/accountFallback.ts";
 import {
-  lockModel,
-  lockModelIfPerModelQuota,
   recordCoreOwnedAntigravityQuotaState,
   shouldDeferAntigravityQuotaStateToCaller,
 } from "../services/accountFallback.ts";
@@ -413,9 +402,7 @@ import { resolveBackgroundTaskRedirect } from "./chatCore/backgroundRedirect.ts"
 import type { CompressionConfig, CompressionPipelineStep } from "../services/compression/types.ts";
 import { prepareWebSearchFallbackBody } from "../services/webSearchFallback.ts";
 import { resolveExplicitStreamAlias, resolveStreamFlag } from "../utils/aiSdkCompat.ts";
-import { prepareWebFetchFallbackBody } from "../services/webFetchInterception.ts";
-import { resolveInterceptSearch, resolveInterceptFetch } from "@/lib/db/interceptionRules";
-import { resolveExplicitStreamAlias, resolveStreamFlag } from "../utils/aiSdkCompat.ts";
+
 import { generateRequestId } from "@/shared/utils/requestId";
 
 import { isLocalStreamLifecycleError } from "@/shared/utils/circuitBreaker";
