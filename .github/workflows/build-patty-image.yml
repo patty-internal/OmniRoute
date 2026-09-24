@@ -94,13 +94,24 @@ jobs:
           node-version: "26"
           cache: npm
 
+      # The 16 GB hosted runner OOM-kills the job silently (logs end with
+      # "The operation was canceled" mid-compile). An 8 GB swapfile lets V8 GC
+      # breathe through the prerender peak instead of dying.
+      - name: Add swap space for the build
+        run: |
+          sudo fallocate -l 8G /mnt/swapfile || sudo dd if=/dev/zero of=/mnt/swapfile bs=1M count=8192
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
+
       - name: Build standalone bundle on the host
         env:
           # Mirror the Dockerfile builder-stage env exactly (stub manager,
           # 1 page-data worker, raised heap) so the traced bundle is identical.
           OMNIROUTE_MITM_STUB: "1"
           CIRCLE_NODE_TOTAL: "2"
-          NODE_OPTIONS: --max-old-space-size=12288
+          NODE_OPTIONS: --max-old-space-size=6144
           DATA_DIR: ${{ github.workspace }}/data
         run: |
           mkdir -p data
