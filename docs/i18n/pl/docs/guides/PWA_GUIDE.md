@@ -1,40 +1,41 @@
+# Progressive Web App (PWA) Guide (Polski)
+
+🌐 **Languages:** 🇺🇸 [English](../../../../guides/PWA_GUIDE.md) · 🇪🇹 [am](../../../am/docs/guides/PWA_GUIDE.md) · 🇸🇦 [ar](../../../ar/docs/guides/PWA_GUIDE.md) · 🇦🇿 [az](../../../az/docs/guides/PWA_GUIDE.md) · 🇧🇬 [bg](../../../bg/docs/guides/PWA_GUIDE.md) · 🇧🇩 [bn](../../../bn/docs/guides/PWA_GUIDE.md) · 🇧🇦 [bs](../../../bs/docs/guides/PWA_GUIDE.md) · 🇨🇿 [cs](../../../cs/docs/guides/PWA_GUIDE.md) · 🇩🇰 [da](../../../da/docs/guides/PWA_GUIDE.md) · 🇩🇪 [de](../../../de/docs/guides/PWA_GUIDE.md) · 🇬🇷 [el](../../../el/docs/guides/PWA_GUIDE.md) · 🇪🇸 [es](../../../es/docs/guides/PWA_GUIDE.md) · 🇪🇪 [et](../../../et/docs/guides/PWA_GUIDE.md) · 🇮🇷 [fa](../../../fa/docs/guides/PWA_GUIDE.md) · 🇫🇮 [fi](../../../fi/docs/guides/PWA_GUIDE.md) · 🇫🇷 [fr](../../../fr/docs/guides/PWA_GUIDE.md) · 🇮🇪 [ga](../../../ga/docs/guides/PWA_GUIDE.md) · 🇮🇳 [gu](../../../gu/docs/guides/PWA_GUIDE.md) · 🇳🇬 [ha](../../../ha/docs/guides/PWA_GUIDE.md) · 🇮🇱 [he](../../../he/docs/guides/PWA_GUIDE.md) · 🇮🇳 [hi](../../../hi/docs/guides/PWA_GUIDE.md) · 🇭🇷 [hr](../../../hr/docs/guides/PWA_GUIDE.md) · 🇭🇺 [hu](../../../hu/docs/guides/PWA_GUIDE.md) · 🇦🇲 [hy](../../../hy/docs/guides/PWA_GUIDE.md) · 🇮🇩 [id](../../../id/docs/guides/PWA_GUIDE.md) · 🇳🇬 [ig](../../../ig/docs/guides/PWA_GUIDE.md) · 🇮🇹 [it](../../../it/docs/guides/PWA_GUIDE.md) · 🇯🇵 [ja](../../../ja/docs/guides/PWA_GUIDE.md) · 🇬🇪 [ka](../../../ka/docs/guides/PWA_GUIDE.md) · 🇰🇭 [km](../../../km/docs/guides/PWA_GUIDE.md) · 🇮🇳 [kn](../../../kn/docs/guides/PWA_GUIDE.md) · 🇰🇷 [ko](../../../ko/docs/guides/PWA_GUIDE.md) · 🇱🇹 [lt](../../../lt/docs/guides/PWA_GUIDE.md) · 🇱🇻 [lv](../../../lv/docs/guides/PWA_GUIDE.md) · 🇮🇳 [ml](../../../ml/docs/guides/PWA_GUIDE.md) · 🇮🇳 [mr](../../../mr/docs/guides/PWA_GUIDE.md) · 🇲🇾 [ms](../../../ms/docs/guides/PWA_GUIDE.md) · 🇲🇹 [mt](../../../mt/docs/guides/PWA_GUIDE.md) · 🇲🇲 [my](../../../my/docs/guides/PWA_GUIDE.md) · 🇳🇵 [ne](../../../ne/docs/guides/PWA_GUIDE.md) · 🇳🇱 [nl](../../../nl/docs/guides/PWA_GUIDE.md) · 🇳🇴 [no](../../../no/docs/guides/PWA_GUIDE.md) · 🇮🇳 [or](../../../or/docs/guides/PWA_GUIDE.md) · 🇮🇳 [pa](../../../pa/docs/guides/PWA_GUIDE.md) · 🇵🇭 [phi](../../../phi/docs/guides/PWA_GUIDE.md) · 🇵🇹 [pt](../../../pt/docs/guides/PWA_GUIDE.md) · 🇧🇷 [pt-BR](../../../pt-BR/docs/guides/PWA_GUIDE.md) · 🇷🇴 [ro](../../../ro/docs/guides/PWA_GUIDE.md) · 🇷🇺 [ru](../../../ru/docs/guides/PWA_GUIDE.md) · 🇱🇰 [si](../../../si/docs/guides/PWA_GUIDE.md) · 🇸🇰 [sk](../../../sk/docs/guides/PWA_GUIDE.md) · 🇸🇮 [sl](../../../sl/docs/guides/PWA_GUIDE.md) · 🇷🇸 [sr](../../../sr/docs/guides/PWA_GUIDE.md) · 🇸🇪 [sv](../../../sv/docs/guides/PWA_GUIDE.md) · 🇰🇪 [sw](../../../sw/docs/guides/PWA_GUIDE.md) · 🇮🇳 [ta](../../../ta/docs/guides/PWA_GUIDE.md) · 🇮🇳 [te](../../../te/docs/guides/PWA_GUIDE.md) · 🇹🇭 [th](../../../th/docs/guides/PWA_GUIDE.md) · 🇹🇷 [tr](../../../tr/docs/guides/PWA_GUIDE.md) · 🇺🇦 [uk-UA](../../../uk-UA/docs/guides/PWA_GUIDE.md) · 🇵🇰 [ur](../../../ur/docs/guides/PWA_GUIDE.md) · 🇺🇿 [uz](../../../uz/docs/guides/PWA_GUIDE.md) · 🇻🇳 [vi](../../../vi/docs/guides/PWA_GUIDE.md) · 🇳🇬 [yo](../../../yo/docs/guides/PWA_GUIDE.md) · 🇨🇳 [zh-CN](../../../zh-CN/docs/guides/PWA_GUIDE.md) · 🇹🇼 [zh-TW](../../../zh-TW/docs/guides/PWA_GUIDE.md)
+
 ---
+
 title: "Przewodnik po Progressive Web App (PWA)"
-version: 3.8.51
-lastUpdated: 2026-08-29
+version: 3.8.40
+lastUpdated: 2026-06-28
 ---
 
 # Przewodnik po Progressive Web App (PWA)
 
-Patty jest dostarczana jako w pełni instalowalna Progressive Web App dla dashboardu OmniRoute. Gdy otworzysz dashboard we wspieranej przeglądarce mobilnej — Android (Chrome) lub iOS (Safari) — możesz wybrać „Dodaj do ekranu głównego” i uzyskać doświadczenie zbliżone do natywnej aplikacji, bez sklepu z aplikacjami.
+Patty jest dostarczana jako w pełni instalowalna Progressive Web App. Gdy otworzysz dashboard w dowolnej przeglądarce mobilnej — Android (Chrome) lub iOS (Safari) — możesz wybrać „Dodaj do ekranu głównego” i uzyskać doświadczenie zbliżone do natywnej aplikacji, bez sklepu z aplikacjami.
 
 ## Czym jest PWA?
 
-Progressive Web App zamienia webowy dashboard w coś, co wygląda i działa jak natywna aplikacja mobilna. Po zainstalowaniu Patty:
+Progressive Web App zamienia webowy dashboard Patty w coś, co wygląda i działa jak natywna aplikacja mobilna. Po zainstalowaniu:
 
 - Uruchamia się z ekranu głównego z własną ikoną
-- Otwiera się w samodzielnym oknie — bez paska adresu przeglądarki ani interfejsu kart
+- Otwiera się na pełnym ekranie — bez paska adresu przeglądarki ani interfejsu kart
 - Działa offline dzięki dedykowanej stronie łączności
 - Buforuje zasoby statyczne w celu szybszego ładowania
 - Obsługuje orientację pionową i poziomą
 
 ## Instalacja
 
-Service workers wymagają bezpiecznego kontekstu przeglądarki. Dla każdego hosta innego
-niż loopback użyj HTTPS; zwykły HTTP jest obsługiwany tylko lokalnie na `localhost` lub
-`127.0.0.1`.
-
 ### Android (Chrome)
 
-1. Otwórz dashboard Patty w Chrome: `https://YOUR_HOST`
-2. Chrome może pokazać baner **"Add Patty to Home screen"**, albo:
+1. Otwórz dashboard Patty w Chrome: `http://YOUR_IP:20128`
+2. Chrome automatycznie pokaże baner **"Add Patty to Home screen"**, albo:
    - Stuknij menu **⋮** (trzy kropki) → **"Add to Home screen"** lub **"Install app"**
 3. Potwierdź monity
 4. Patty pojawi się na ekranie głównym jako samodzielna aplikacja
 
 ### iOS (Safari)
 
-1. Otwórz dashboard Patty w Safari: `https://YOUR_HOST`
+1. Otwórz dashboard Patty w Safari: `http://YOUR_IP:20128`
 2. Stuknij przycisk **Share** (kwadrat ze strzałką)
 3. Przewiń w dół i stuknij **"Add to Home Screen"**
 4. Nadaj nazwę (domyślnie „Patty”) i stuknij **Add**
@@ -49,117 +50,124 @@ niż loopback użyj HTTPS; zwykły HTTP jest obsługiwany tylko lokalnie na `loc
 
 ## Funkcje
 
-### Tryb samodzielnego okna
+### Tryb pełnoekranowy
 
-Manifest jest skonfigurowany z `display: "standalone"`, więc zainstalowana aplikacja ma własne okno bez standardowych kart i paska adresu. System operacyjny może nadal wyświetlać własny pasek statusu i elementy nawigacji.
+Manifest jest skonfigurowany z ustawieniem `display: "fullscreen"`, co oznacza, że zainstalowana aplikacja wykorzystuje cały ekran — bez elementów interfejsu przeglądarki i bez nakładania się na pasek stanu. Dzięki temu panel sprawia wrażenie prawdziwie natywnego.
 
-### Wsparcie offline
+### Obsługa trybu offline
 
-Patty zawiera service worker (`sw.js`), który zapewnia inteligentne buforowanie:
+Patty zawiera service workera (`sw.js`), który zapewnia inteligentne buforowanie:
 
-| Typ zasobu                                             | Strategia                          | Zachowanie                                                                   |
-| ------------------------------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- |
-| **App Shell**                                          | Cache-first                        | `/`, `/offline`, manifest i ikony są wstępnie buforowane przy instalacji     |
-| **Zasoby statyczne** (CSS, JS, obrazy, fonty)          | Cache-first                        | Serwuje istniejącą odpowiedź z cache; w przeciwnym razie pobiera i buforuje  |
-| **Bundle'y Next.js** (`/_next/`)                       | Network-first with cache update    | Pobiera z sieci i aktualizuje cache; offline serwuje wersję z cache          |
-| **Żądania nawigacji**                                  | Network-first with cached fallback | Pobiera z sieci; wraca do żądanej strony, `/`, a następnie `/offline`        |
-| **Trasy API** (`/api/`, `/a2a`, `/dashboard/endpoint`) | Bypass (never cached)              | Zawsze idzie bezpośrednio na serwer — nigdy nie jest przechwytywane przez SW |
+| Typ zasobu                                             | Strategia                                                         | Działanie                                                                                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Powłoka aplikacji**                                  | Najpierw pamięć podręczna                                         | `/`, `/offline`, manifest i ikony są wstępnie buforowane podczas instalacji                                               |
+| **Zasoby statyczne** (CSS, JS, obrazy, czcionki)       | Najpierw sieć, z użyciem pamięci podręcznej w razie niepowodzenia | Pobiera aktualne zasoby z sieci; w trybie offline korzysta z pamięci podręcznej                                           |
+| **Pakiety Next.js** (`/_next/`)                        | Najpierw sieć, z aktualizacją pamięci podręcznej                  | Pobiera zasoby z sieci i aktualizuje pamięć podręczną; w trybie offline udostępnia wersję z pamięci podręcznej            |
+| **Żądania nawigacyjne**                                | Pomijanie (nigdy nie są przechwytywane)                           | Przeglądarka zarządza przełączaniem awaryjnym HTTP/3→HTTP/2; nieaktywny socket QUIC nie może skutkować `Response.error()` |
+| **Trasy API / panelu** (`/api/`, `/a2a`, `/dashboard`) | Pomijanie (nigdy nie są buforowane)                               | Zawsze trafiają bezpośrednio do serwera — nigdy nie są przechwytywane przez service workera                               |
 
-### Strona offline
+### Strona trybu offline
 
-Gdy sieć jest niedostępna i użytkownik przechodzi na nową stronę, service worker serwuje dedykowaną stronę `/offline`, która:
+Gdy sieć jest niedostępna, a użytkownik przechodzi do nowej strony, service worker wyświetla dedykowaną stronę `/offline`, która:
 
-- Wyświetla czytelny komunikat **"Connectivity Issue"**
-- Pokazuje żywy **wskaźnik statusu online/offline** aktualizowany w czasie rzeczywistym
-- Udostępnia przycisk **"Retry Connection"** do przeładowania po powrocie łączności
-- Linkuje do **Status Page** w celach diagnostycznych
+- Wyświetla jasny komunikat **„Problem z połączeniem”**
+- Pokazuje aktualizowany w czasie rzeczywistym **wskaźnik stanu online/offline**
+- Udostępnia przycisk **„Ponów połączenie”**, który umożliwia ponowne załadowanie strony po przywróceniu łączności
+- Zawiera łącze do **strony stanu** umożliwiającej diagnostykę
 
 ### Ikony aplikacji
 
-Patty dostarcza ikony zoptymalizowane pod każdą platformę:
+Patty udostępnia ikony zoptymalizowane dla poszczególnych platform:
 
-| Plik           | Rozmiar         | Używane przez                                          |
-| -------------- | --------------- | ------------------------------------------------------ |
-| `icon-192.png` | 192×192         | Promocję instalacji PWA w Chromium i kompaktowe ekrany |
-| `icon-512.png` | 512×512         | Ekrany główne Android i iOS oraz splash screen         |
-| `favicon.ico`  | Wiele rozmiarów | Karty przeglądarki i obsługę starszych przeglądarek    |
+| Plik                   | Rozmiar             | Zastosowanie                                         |
+| ---------------------- | ------------------- | ---------------------------------------------------- |
+| `icon-512.png`         | 512×512             | Monit instalacji w systemie Android, ekran powitalny |
+| `apple-touch-icon.png` | 180×180             | Ikona na ekranie głównym systemu iOS                 |
+| `icon-192.svg`         | 192×192 (wektorowa) | Adaptacyjna ikona systemu Android                    |
+| `apple-touch-icon.svg` | 180×180 (wektorowa) | Ikona zapasowa dla urządzeń Apple                    |
+| `favicon.svg`          | Wektorowy           | Karty przeglądarki                                   |
+| `favicon.ico`          | Wiele rozmiarów     | Starsze przeglądarki                                 |
 
 ### Automatyczna rejestracja
 
-Service worker jest rejestrowany automatycznie przez komponent `<PwaRegister />` w root layout. Nie jest potrzebna żadna akcja użytkownika — aplikacja staje się instalowalna, gdy tylko przeglądarka wykryje poprawny manifest i service worker.
+Service worker jest rejestrowany automatycznie za pośrednictwem komponentu `<PwaRegister />` w głównym układzie. Użytkownik nie musi podejmować żadnych działań — aplikację można zainstalować, gdy tylko przeglądarka wykryje prawidłowy manifest i service workera.
 
 ## Architektura techniczna
 
-### Web App Manifest (`manifest.webmanifest`)
+### Manifest aplikacji internetowej (`manifest.webmanifest`)
 
-Generowany przez Next.js przez `src/app/manifest.ts`:
+Generowany przez Next.js za pośrednictwem `src/app/manifest.ts`:
 
 ```json
 {
   "name": "Patty",
   "short_name": "Patty",
   "description": "Patty — where AI becomes everyone's superpower.",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#0b0f1a",
+  "theme_color": "#0b0f1a",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ]
 }
 ```
 
 ### Service Worker (`public/sw.js`)
 
-Zwykły service worker (bez zależności frameworkowych) z:
+Standardowy service worker (bez zależności od frameworków), obejmujący:
 
-- **Faza install**: wstępnie buforuje app shell (root, strona offline, manifest, ikony)
-- **Faza activate**: czyści stare wersje cache i przejmuje wszystkie klienty
-- **Faza fetch**: inteligentne routowanie według typu żądania (nawigacja, zasób statyczny, API)
-- **Wersjonowanie cache**: `omniroute-pwa-v3` — zwiększ tę wartość, aby wymusić świeży cache przy aktualizacji
+- **Faza instalacji**: Wstępnie zapisuje w pamięci podręcznej szkielet aplikacji (stronę główną, stronę trybu offline, manifest i ikony)
+- **Faza aktywacji**: Usuwa stare wersje pamięci podręcznej i przejmuje kontrolę nad wszystkimi klientami
+- **Faza pobierania**: Inteligentnie kieruje żądania na podstawie ich typu (nawigacja, zasób statyczny, API)
+- **Wersjonowanie pamięci podręcznej**: `omniroute-pwa-v3` — zwiększ tę wartość, aby wymusić utworzenie nowej pamięci podręcznej po aktualizacji
 
-### Metadane layoutu (`src/app/layout.tsx`)
+### Metadane układu (`src/app/layout.tsx`)
 
-Root layout dostarcza wszystkie meta tagi wymagane do zgodności z PWA:
+Układ główny zawiera wszystkie metatagi wymagane do zapewnienia zgodności z PWA:
 
-- Link `manifest` do `/manifest.webmanifest`
-- `apple-web-app-capable: true` dla trybu standalone na iOS
+- Łącze `manifest` do `/manifest.webmanifest`
+- `apple-web-app-capable: true` dla trybu autonomicznego w systemie iOS
 - `apple-web-app-status-bar-style: black-translucent`
-- `mobile-web-app-capable: yes` dla Chrome na Androidzie
+- `mobile-web-app-capable: yes` dla przeglądarki Chrome na Androidzie
 - `theme-color: #0b0f1a`
-- `viewport-fit: cover` do renderowania od krawędzi do krawędzi
+- `viewport-fit: cover` dla renderowania od krawędzi do krawędzi
 
 ### Komponent: `PwaRegister`
 
-Znajduje się w `src/shared/components/PwaRegister.tsx`. Ten komponent kliencki:
+Znajdujący się w `src/shared/components/PwaRegister.tsx` komponent kliencki:
 
-1. Uruchamia się przy montowaniu (tylko po stronie klienta)
+1. Uruchamia się po zamontowaniu (wyłącznie po stronie klienta)
 2. Sprawdza obsługę `serviceWorker` w przeglądarce
-3. Rejestruje `/sw.js` w tle (błędy są połykane, aby nie blokować aplikacji)
-4. Nic nie renderuje (`return null`) — to komponent wyłącznie ze skutkami ubocznymi
+3. Rejestruje `/sw.js` bez komunikatów (błędy są ignorowane, aby uniknąć blokowania aplikacji)
+4. Niczego nie renderuje (`return null`) — jest to komponent służący wyłącznie do wykonywania efektów ubocznych
 
 ## Użycie z Termux (Android)
 
-Przy uruchamianiu OmniRoute na Androidzie przez Termux PWA działa bezproblemowo:
+Przy uruchamianiu Patty na Androidzie przez Termux PWA działa bezproblemowo:
 
 1. Uruchom OmniRoute w Termux: `npx omniroute`
 2. Otwórz Chrome na tym samym telefonie: `http://localhost:20128`
-3. Zainstaluj Patty przez "Add to Home Screen"
-4. Patty łączy się z lokalnym serwerem Termux — wszystko działa na urządzeniu
+3. Zainstaluj PWA przez "Add to Home Screen"
+4. PWA łączy się z lokalnym serwerem Termux — wszystko działa na urządzeniu
 
 Ta kombinacja oznacza, że telefon z Androidem jest jednocześnie **serwerem** (Termux) i **klientem** (PWA) — kompletna, samodzielna brama AI.
 
 ## Użycie z innych urządzeń
 
-Zainstaluj Patty na dowolnym urządzeniu, które ma bezpieczny dostęp przeglądarkowy do
-serwera OmniRoute:
+Zainstaluj PWA na dowolnym urządzeniu, które ma dostęp przeglądarkowy do serwera Patty:
 
-- **Inny telefon/tablet**: przejdź pod adres HTTPS serwera i zainstaluj PWA
+- **Inny telefon/tablet**: przejdź do `http://PHONE_IP:20128` i zainstaluj PWA
 - **Laptop**: otwórz Chrome/Edge i zainstaluj jako desktopowe PWA
-- **Smart TV z przeglądarką**: otwórz dashboard w samodzielnym oknie, jeśli jest wspierane
+- **Smart TV z przeglądarką**: otwórz dashboard na pełnym ekranie
 
 ## Dostosowywanie
 
@@ -169,13 +177,11 @@ Tytuł przeglądarki i metadane aplikacji respektują ustawienie **Instance Name
 
 ### Własny favicon
 
-Jeśli wgrasz własny favicon przez `Dashboard → Settings`, karty przeglądarki użyją
-własnej ikony. Zainstalowane PWA używa wbudowanych plików `icon-192.png` i
-`icon-512.png`.
+Jeśli wgrasz własny favicon przez `Dashboard → Settings`, ikona PWA na desktopie odzwierciedli tę ikonę. Ikony ekranu głównego na mobile używają wbudowanych plików `icon-512.png` i `apple-touch-icon.png`.
 
 ## Ograniczenia
 
-- **Push notifications zależne od platformy** — service worker obsługuje zdarzenia push, ale dostarczanie i działanie w tle zależą od wsparcia przeglądarki, zasad systemu operacyjnego i uprawnienia do powiadomień.
+- **Brak push notifications** — service worker nie implementuje Push API. Powiadomienia obsługuje aplikacja Electron.
 - **Brak background sync** — akcje offline nie są kolejkowane do ponownego odtworzenia. PWA jest przede wszystkim przeglądarką dashboardu.
 - **Ograniczenia iOS** — Safari na iOS nie obsługuje wszystkich funkcji PWA (np. monity instalacji są ręczne, a background service workers są ograniczone).
 - **Rozmiar cache** — service worker buforuje wyłącznie zasoby statyczne. Duże payloady odpowiedzi z tras `/api/` nigdy nie trafiają do cache.
@@ -190,6 +196,7 @@ własnej ikony. Zainstalowane PWA używa wbudowanych plików `icon-192.png` i
 | `src/shared/components/PwaRegister.tsx` | Komponent kliencki rejestrujący service worker                 |
 | `src/app/offline/page.tsx`              | Strona fallback offline z żywym wskaźnikiem statusu            |
 | `src/app/layout.tsx`                    | Root layout z metadanymi PWA (apple-web-app, theme-color itd.) |
-| `public/icon-192.png`                   | Ikona PNG 192×192 (promocja instalacji w Chromium)             |
-| `public/icon-512.png`                   | Ikona PNG 512×512 (Android, iOS, splash screen)                |
-| `public/favicon.ico`                    | Favicon przeglądarki w wielu rozmiarach                        |
+| `public/icon-512.png`                   | Ikona PNG 512×512 (Android, splash screen)                     |
+| `public/apple-touch-icon.png`           | Ikona PNG 180×180 (ekran główny iOS)                           |
+| `public/icon-192.svg`                   | Ikona SVG 192×192 (Android adaptive)                           |
+| `public/apple-touch-icon.svg`           | Ikona SVG 180×180 (fallback Apple)                             |

@@ -21,11 +21,21 @@ const SCOPE_VARIANT: Record<string, "info" | "warning" | "error" | "default"> = 
   admin: "error",
 };
 
+async function fetchTokens(): Promise<AccessTokenRow[]> {
+  const res = await fetch("/api/cli/tokens");
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data.tokens) ? data.tokens : [];
+}
+
 export default function AccessTokensTab() {
   const t = useTranslations("settings");
   // Graceful fallback so the tab renders in every locale before keys are translated.
-  const L = (key: string, fallback: string) =>
-    typeof t.has === "function" && t.has(key) ? t(key) : fallback;
+  const L = useCallback(
+    (key: string, fallback: string) =>
+      typeof t.has === "function" && t.has(key) ? t(key) : fallback,
+    [t]
+  );
 
   const [tokens, setTokens] = useState<AccessTokenRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,20 +54,30 @@ export default function AccessTokensTab() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/cli/tokens");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setTokens(Array.isArray(data.tokens) ? data.tokens : []);
+      setTokens(await fetchTokens());
     } catch {
       setError(L("accessTokensLoadError", "Could not load access tokens."));
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [L]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const tokens = await fetchTokens();
+        if (!cancelled) setTokens(tokens);
+      } catch {
+        if (!cancelled) setError(L("accessTokensLoadError", "Could not load access tokens."));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [L]);
 
   const createToken = async () => {
     if (!name.trim()) return;

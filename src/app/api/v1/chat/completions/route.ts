@@ -3,7 +3,12 @@ import { CORS_HEADERS, handleCorsOptions } from "@/shared/utils/cors";
 import { callCloudWithMachineId } from "@/shared/utils/cloud";
 import { handleChat } from "@/sse/handlers/chat";
 import { generateRequestId } from "@/shared/utils/requestId";
+import { resolveIncomingCorrelationId } from "@/shared/utils/correlationPreserve.ts";
 import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
+import {
+  handleSelfHostedCompletions,
+  isSelfHostedEntryConfigured,
+} from "@omniroute/open-sse/services/selfHostedEntry.ts";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
 import { createInjectionGuard } from "@/middleware/promptInjectionGuard";
 import { acceptHeaderForcesStream } from "@omniroute/open-sse/utils/aiSdkCompat.ts";
@@ -19,7 +24,7 @@ import {
   admitChatStructure,
   CHAT_ADMISSION_QUEUE_MAX_MS,
   releaseChatAdmissionAfterHandler,
-  releaseChatAdmissionWhenStreaming,
+  releaseChatAdmissionWhenDone,
   resolveSessionId,
 } from "@/shared/middleware/chatBodyAdmission";
 import {
@@ -27,17 +32,29 @@ import {
   withCompressionHeaderEcho,
 } from "@/shared/utils/compressionHeaderEcho";
 import { resolveModelAliasWithSeedFallbackOnBody } from "@/lib/modelAliasResolver";
+import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
+import {
+  assertRuntimeModelProviderAvailable,
+  isRuntimeProviderRetirementError,
+} from "@/shared/constants/providerRetirement";
+import {
+  assertCommonChatGptWebModelAvailable,
+  isCommonChatGptWebRetirementError,
+} from "@/shared/constants/chatgptWebRetirement";
+import { ensureSemanticCacheDbBridge } from "@/lib/cache/semanticCacheDbBridge";
 
 let initPromise = null;
 
-// Singleton injection guard instance
-const injectionGuard = createInjectionGuard();
+// Singleton injection guard instance. `logger: null` — the guardrail registry
+// re-evaluates this request inside handleChat with the pino logger (#11936 dedupe).
+const injectionGuard = createInjectionGuard({ logger: null });
 
 /**
  * Initialize translators once (Promise-based singleton — no race condition)
  */
 function ensureInitialized() {
   if (!initPromise) {
+    ensureSemanticCacheDbBridge();
     initPromise = Promise.resolve(initTranslators()).then(() => {
       console.log("[SSE] Translators initialized");
     });
@@ -111,7 +128,7 @@ export async function POST(request) {
   const admission = admissionResult;
   request = admission.request;
   const finishAdmission = (response: Response) =>
-    releaseChatAdmissionWhenStreaming(response, admission.lease);
+    releaseChatAdmissionWhenDone(response, admission.lease, { signal: request.signal });
 
   try {
     // One-line marker for diagnosing 413 / Server-Action interceptions.
@@ -147,6 +164,49 @@ export async function POST(request) {
               errorResponse(400, `${field}: ${issue?.message ?? "Invalid request"}`)
             );
           }
+
+          // Self-hosted unified entry (D4 — RIC-738): when a provider config is
+          // present, divert BEFORE the cloud-only model retirement/alias checks so
+          // self-hosted model ids (`local/llama3`, `ollama/qwen2`, ...) never trip
+          // cloud-peer 410s or alias rewrites. Config-absent requests proceed to the
+          // normal cloud pipeline unchanged.
+          //
+          // #14485: the divert must still run the same key-policy enforcement as
+          // the normal cloud pipeline (enforceApiKeyPolicy, called deep inside
+          // handleChat() on that path) — otherwise a disabled/rate-limited/
+          // schedule-restricted OmniRoute API key reaches the self-hosted upstream
+          // unchecked. Run it ONLY when the divert is configured (it then answers
+          // every request): the cloud path already runs it once in handleChat(),
+          // and a second run would consume the rate-limit window twice, apply
+          // throttleDelayMs twice and check allowedModels before alias resolution.
+          if (isSelfHostedEntryConfigured()) {
+            const keyPolicy = await enforceApiKeyPolicy(
+              request,
+              typeof parsedBody.model === "string" ? parsedBody.model : null
+            );
+            if (keyPolicy.rejection) {
+              return finishAdmission(keyPolicy.rejection);
+            }
+
+            const selfHostedResponse = await handleSelfHostedCompletions(request, parsedBody);
+            if (selfHostedResponse) {
+              return finishAdmission(selfHostedResponse);
+            }
+          }
+
+          try {
+            assertCommonChatGptWebModelAvailable(parsedBody.model);
+          } catch (error) {
+            if (isCommonChatGptWebRetirementError(error)) {
+              return finishAdmission(
+                errorResponse(error.status, error.message, {
+                  type: "provider_error",
+                  code: error.code,
+                })
+              );
+            }
+            throw error;
+          }
         }
 
         const structuralAdmission = await admitChatStructure(parsedBody, admission.lease, {
@@ -158,6 +218,24 @@ export async function POST(request) {
           admission.lease?.release();
           return finishAdmission(structuralAdmission.response);
         }
+        admission.lease = structuralAdmission.lease;
+
+        // Preserve the caller-supplied provider identity long enough to enforce
+        // retirement. A persisted alias can otherwise rewrite felo-web/... to a
+        // healthy provider before getModelInfo or the executor tombstones see it.
+        try {
+          assertRuntimeModelProviderAvailable(parsedBody.model);
+        } catch (error) {
+          if (isRuntimeProviderRetirementError(error)) {
+            return finishAdmission(
+              errorResponse(error.status, error.message, {
+                type: "provider_error",
+                code: error.code,
+              })
+            );
+          }
+          throw error;
+        }
 
         // Resolve model alias before forwarding to handleChat
         if (parsedBody && typeof parsedBody === "object") {
@@ -165,7 +243,6 @@ export async function POST(request) {
             /* swallow — fall through with original model */
           });
         }
-        admission.lease = structuralAdmission.lease;
 
         const { blocked, result } = injectionGuard(parsedBody);
         if (blocked) {
@@ -204,14 +281,20 @@ export async function POST(request) {
     // paths) drop the meta the docs promise.
     const compressionRequestHeader = readCompressionRequestHeader(request);
 
+    // #11739: preserve caller-provided X-Correlation-Id when present; generate only when absent.
+    const callerCorrelationId = resolveIncomingCorrelationId(
+      request.headers.get("x-correlation-id")
+    );
+
     if (wantsStreaming) {
-      const reqId = generateRequestId();
+      const reqId = callerCorrelationId ?? generateRequestId();
       // Wrap the real handler response, not the synthetic early-keepalive response. If the
       // client cancels while handleChat is still pending, earlyStreamKeepalive will cancel the
       // eventual handler body; only that confirmed cleanup releases heavyweight capacity.
       const handlerResponse = releaseChatAdmissionAfterHandler(
         handleChat(request, null, parsedBody, reqId),
-        admission.lease
+        admission.lease,
+        { signal: request.signal }
       );
       const streamedResponse = await withEarlyStreamKeepalive(handlerResponse, {
         signal: request.signal,
@@ -226,7 +309,7 @@ export async function POST(request) {
 
     return finishAdmission(
       withCompressionHeaderEcho(
-        await handleChat(request, null, parsedBody),
+        await handleChat(request, null, parsedBody, callerCorrelationId ?? undefined),
         compressionRequestHeader
       )
     );

@@ -9,7 +9,7 @@
  * admin, and catalog callers during Phase 2/3 of the lazy-decrypt rollout.
  */
 
-import { decrypt, looksEncrypted } from "../encryption";
+import { decrypt, decryptQuiet, looksEncrypted } from "../encryption";
 import { toNumber, toNumberOrNull } from "@/shared/utils/numeric";
 
 type JsonRecord = Record<string, unknown>;
@@ -118,10 +118,18 @@ export function createLazyConnectionView(row: Record<string, unknown>): Provider
 
   const ensureDecrypted = () => {
     if (!decrypted) {
+      const connectionId = base.id;
+      const provider = base.provider;
       decrypted = {
-        apiKey: toStringOrNull(decrypt(base.apiKey)),
-        accessToken: toStringOrNull(decrypt(base.accessToken)),
-        refreshToken: toStringOrNull(decrypt(base.refreshToken)),
+        apiKey: toStringOrNull(
+          decryptQuiet(base.apiKey, { connectionId, provider, field: "apiKey" })
+        ),
+        accessToken: toStringOrNull(
+          decryptQuiet(base.accessToken, { connectionId, provider, field: "accessToken" })
+        ),
+        refreshToken: toStringOrNull(
+          decryptQuiet(base.refreshToken, { connectionId, provider, field: "refreshToken" })
+        ),
       };
     }
     return decrypted;
@@ -158,11 +166,17 @@ export function createLazyRowProxy(row: Record<string, unknown>): Record<string,
 
   const ensureDecrypted = () => {
     if (!decrypted) {
+      const connectionId = typeof row.id === "string" ? row.id : "";
+      const provider = typeof row.provider === "string" ? row.provider : "unknown";
       decrypted = {
-        apiKey: lazyDecrypt(row.apiKey),
-        accessToken: lazyDecrypt(row.accessToken),
-        refreshToken: lazyDecrypt(row.refreshToken),
-        idToken: lazyDecrypt(row.idToken),
+        apiKey: lazyDecrypt(row.apiKey, { connectionId, provider, field: "apiKey" }),
+        accessToken: lazyDecrypt(row.accessToken, { connectionId, provider, field: "accessToken" }),
+        refreshToken: lazyDecrypt(row.refreshToken, {
+          connectionId,
+          provider,
+          field: "refreshToken",
+        }),
+        idToken: lazyDecrypt(row.idToken, { connectionId, provider, field: "idToken" }),
       };
     }
     return decrypted;
@@ -202,7 +216,10 @@ export function createLazyRowProxy(row: Record<string, unknown>): Record<string,
   });
 }
 
-function lazyDecrypt(value: unknown): string | null | undefined {
+function lazyDecrypt(
+  value: unknown,
+  meta: { connectionId: string; provider: string; field: string }
+): string | null | undefined {
   if (typeof value !== "string") return undefined;
-  return decrypt(value);
+  return decryptQuiet(value, meta);
 }

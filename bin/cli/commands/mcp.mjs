@@ -9,6 +9,8 @@ function truncate(v, len = 60) {
   return s.length > len ? s.slice(0, len - 1) + "…" : s;
 }
 
+const VALID_MCP_TRANSPORTS = ["stdio", "sse", "streamable-http"];
+
 const mcpToolSchema = [
   { key: "name", header: "Tool", width: 36 },
   {
@@ -40,6 +42,25 @@ export function registerMcp(program) {
     .action(async (opts, cmd) => {
       const globalOpts = cmd.parent.optsWithGlobals();
       const exitCode = await runMcpRestartCommand({ ...opts, output: globalOpts.output });
+      if (exitCode !== 0) process.exit(exitCode);
+    });
+
+  mcp
+    .command("enable")
+    .description(t("mcp.enable.description"))
+    .option("--transport <transport>", t("mcp.enable.transport"))
+    .action(async (opts, cmd) => {
+      const globalOpts = cmd.parent.optsWithGlobals();
+      const exitCode = await runMcpEnableCommand({ ...opts, output: globalOpts.output });
+      if (exitCode !== 0) process.exit(exitCode);
+    });
+
+  mcp
+    .command("disable")
+    .description(t("mcp.disable.description"))
+    .action(async (opts, cmd) => {
+      const globalOpts = cmd.parent.optsWithGlobals();
+      const exitCode = await runMcpDisableCommand({ ...opts, output: globalOpts.output });
       if (exitCode !== 0) process.exit(exitCode);
     });
 
@@ -234,6 +255,7 @@ export async function runMcpStatusCommand(opts = {}) {
     });
     if (!res.ok) {
       console.log(t("mcp.stopped"));
+      console.log(t("mcp.stoppedHint"));
       return 0;
     }
 
@@ -247,6 +269,9 @@ export async function runMcpStatusCommand(opts = {}) {
     const transport = status.transport || "stdio";
     const online = status.online ?? status.running;
     console.log(online ? t("mcp.running", { transport }) : t("mcp.stopped"));
+    if (!online && status.enabled === false) {
+      console.log(t("mcp.stoppedHint"));
+    }
     if (status.toolsCount !== undefined) console.log(`  Tools: ${status.toolsCount}`);
     if (status.scopes?.length) {
       console.log("  Scopes:");
@@ -277,8 +302,74 @@ export async function runMcpRestartCommand(opts = {}) {
       console.log(t("mcp.restarted"));
       return 0;
     }
-    console.error(t("common.error", { message: `HTTP ${res.status}` }));
+    const body = await res.json().catch(() => null);
+    const message = body?.error || `HTTP ${res.status}`;
+    console.error(t("common.error", { message }));
     return 1;
+  } catch (err) {
+    console.error(t("common.error", { message: err instanceof Error ? err.message : String(err) }));
+    return 1;
+  }
+}
+
+export async function runMcpEnableCommand(opts = {}) {
+  const serverUp = await isServerUp();
+  if (!serverUp) {
+    console.error(t("common.serverOffline"));
+    return 1;
+  }
+
+  if (opts.transport && !VALID_MCP_TRANSPORTS.includes(opts.transport)) {
+    console.error(
+      t("common.error", {
+        message: `Invalid transport '${opts.transport}'. Valid: ${VALID_MCP_TRANSPORTS.join(", ")}`,
+      })
+    );
+    return 1;
+  }
+
+  try {
+    const body = { mcpEnabled: true };
+    if (opts.transport) body.mcpTransport = opts.transport;
+
+    const res = await apiFetch("/api/settings", {
+      method: "PATCH",
+      body,
+      retry: false,
+      acceptNotOk: true,
+    });
+    if (!res.ok) {
+      console.error(t("common.error", { message: `HTTP ${res.status}` }));
+      return 1;
+    }
+    console.log(t("mcp.enabled"));
+    return 0;
+  } catch (err) {
+    console.error(t("common.error", { message: err instanceof Error ? err.message : String(err) }));
+    return 1;
+  }
+}
+
+export async function runMcpDisableCommand(opts = {}) {
+  const serverUp = await isServerUp();
+  if (!serverUp) {
+    console.error(t("common.serverOffline"));
+    return 1;
+  }
+
+  try {
+    const res = await apiFetch("/api/settings", {
+      method: "PATCH",
+      body: { mcpEnabled: false },
+      retry: false,
+      acceptNotOk: true,
+    });
+    if (!res.ok) {
+      console.error(t("common.error", { message: `HTTP ${res.status}` }));
+      return 1;
+    }
+    console.log(t("mcp.disabled"));
+    return 0;
   } catch (err) {
     console.error(t("common.error", { message: err instanceof Error ? err.message : String(err) }));
     return 1;

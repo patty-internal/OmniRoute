@@ -169,17 +169,6 @@ export function removeGroupPermission(permissionId: string): boolean {
   }
   return result.changes > 0;
 }
-
-export function clearGroupPermissions(groupId: string): void {
-  const db = getDbInstance() as any;
-  const result = db.prepare("DELETE FROM group_model_permissions WHERE group_id = ?").run(groupId);
-  if (result.changes > 0) {
-    invalidateModelCatalogCache();
-  }
-}
-
-// ── Key Group Members ────────────────────────────────────────────────────
-
 export function getGroupMembers(groupId: string): KeyGroupMember[] {
   const db = getDbInstance() as any;
   const rows = db

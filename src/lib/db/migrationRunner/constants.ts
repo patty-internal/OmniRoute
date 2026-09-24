@@ -159,6 +159,24 @@ export const RENAMED_MIGRATION_COMPATIBILITY = [
     toName: "windsurf_to_devin_desktop",
   },
   {
+    // inspector_custom_hosts was once published in slot 074, now occupied by
+    // discovery_results. Its canonical idempotent migration lives at 081.
+    fromVersion: "074",
+    fromName: "inspector_custom_hosts",
+    toVersion: "081",
+    toName: "inspector_custom_hosts",
+  },
+  {
+    // Fork-only migration: upstream's 164_retire_microsoft_designer_web took the
+    // 164 slot in the v3.8.51 sync. Fork databases that already applied the
+    // settlement outbox under 164 are rehomed to the next free slot (187),
+    // freeing 164 for the canonical retirement migration.
+    fromVersion: "164",
+    fromName: "patty_settlement_outbox",
+    toVersion: "187",
+    toName: "patty_settlement_outbox",
+  },
+  {
     fromVersion: "134",
     fromName: "ccr_blocks",
     toVersion: "139",
@@ -178,6 +196,30 @@ export const RENAMED_MIGRATION_COMPATIBILITY = [
     fromName: "radar_local_model_state",
     toVersion: "153",
     toName: "radar_local_model_state",
+  },
+  {
+    fromVersion: "056",
+    fromName: "provider_default",
+    toVersion: "056",
+    toName: "mcp_accessibility_compression",
+  },
+  {
+    fromVersion: "073",
+    fromName: "discovery_results",
+    toVersion: "073",
+    toName: "per_model_token_limits",
+  },
+  {
+    fromVersion: "077",
+    fromName: "plugin_metrics",
+    toVersion: "077",
+    toName: "api_key_stream_default_mode",
+  },
+  {
+    fromVersion: "101",
+    fromName: "proxy_pool_rotation",
+    toVersion: "101",
+    toName: "api_key_usage_limits",
   },
 ] as const;
 
@@ -225,4 +267,8 @@ export const PHYSICAL_SCHEMA_SENTINELS = [
 ] as const;
 
 export const INITIAL_SCHEMA_SENTINELS = ["provider_connections", "combos", "call_logs"] as const;
-export const OPTIONAL_FTS5_MIGRATION_VERSIONS = new Set(["022", "023"]);
+// "178" added by #13717: migration 178 currently hard-fails on sql.js/no-FTS5
+// drivers. If #13331 (adds "180") lands before this, reconcile to the union
+// ({"022","023","178","180"}) and update the assertion in
+// tests/unit/db-migrationrunner-constants-split.test.ts accordingly.
+export const OPTIONAL_FTS5_MIGRATION_VERSIONS = new Set(["022", "023", "178"]);

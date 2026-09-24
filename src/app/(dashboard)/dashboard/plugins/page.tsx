@@ -37,7 +37,9 @@ export default function PluginsPage() {
   }, []);
 
   useEffect(() => {
-    fetchPlugins();
+    void (async () => {
+      await fetchPlugins();
+    })();
   }, [fetchPlugins]);
 
   const handleScan = async () => {

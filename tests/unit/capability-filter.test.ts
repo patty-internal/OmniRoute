@@ -117,12 +117,12 @@ test("checkRequestCapabilityFit: tools OK when model supports tools", () => {
 });
 
 test("checkRequestCapabilityFit: tools bypassed for emulated-tool provider", () => {
-  // chatgpt-web has toolCalling: "emulated" in the provider registry,
+  // gemini-web has toolCalling: "emulated" in the provider registry,
   // so the filter must not reject it even when capabilities report false.
   const result = checkRequestCapabilityFit(
     caps({ supportsTools: false, toolCalling: false }),
     req({ requiresTools: true }),
-    "chatgpt-web"
+    "gemini-web"
   );
   assert.equal(result.compatible, true);
   assert.deepEqual(result.failures, []);

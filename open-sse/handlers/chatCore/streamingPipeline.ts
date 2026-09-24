@@ -74,6 +74,13 @@ export function assembleStreamingPipeline(
       harness: PattyHarness;
       awaitSettlement: () => Promise<void>;
     } | null;
+
+    /** See pipeWithDisconnect's own doc comment — the post-handoff "stream is
+     * open but never produced real output" watchdog. Threaded from the same
+     * adaptive streamReadinessPolicy.timeoutMs already computed for this
+     * request's pre-handoff readiness gate, so slow-first-content reasoning
+     * models keep the same generous budget in both phases. */
+    contentStallTimeoutMs?: number;
   },
   deps: StreamingPipelineDeps = DEFAULT_DEPS
 ) {
@@ -88,7 +95,8 @@ export function assembleStreamingPipeline(
   let piiStream = deps.pipeWithDisconnect(
     args.providerResponse,
     args.transformStream,
-    args.streamController
+    args.streamController,
+    { contentStallTimeoutMs: args.contentStallTimeoutMs }
   );
   if (typeof args.createPiiTransform === "function") {
     piiStream = piiStream.pipeThrough((args.createPiiTransform as () => TransformStream)());

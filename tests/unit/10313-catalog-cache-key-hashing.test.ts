@@ -18,7 +18,7 @@ const SECRET = "sk-live-PROBE-10313-SUPER-SECRET-TOKEN";
 test.beforeEach(() => {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   v1ModelsCatalog.__resetCatalogBuilderRunsForTest();
 });
@@ -26,7 +26,7 @@ test.beforeEach(() => {
 test.after(() => {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 function captureMapKeys(): { keys: string[]; restore: () => void } {
@@ -45,10 +45,11 @@ function captureMapKeys(): { keys: string[]; restore: () => void } {
   };
 }
 
-// buildCatalogCacheKey emits `prefix|isCodex|apiKeyFingerprint|configuredOnly|hideAuto|hideNoThink`
-// (6 pipe-delimited fields). Other in-flight keys (e.g. `x-request-id`) don't match.
+// buildCatalogCacheKey emits
+// `prefix|isCodex|apiKeyFingerprint|configuredOnly|hideAuto|hideNoThink|page`
+// (7 pipe-delimited fields). Other in-flight keys (e.g. `x-request-id`) don't match.
 function isCatalogCacheKey(k: string): boolean {
-  return k.split("|").length === 6;
+  return k.split("|").length === 7;
 }
 
 test("catalog cache Map keys must not contain the raw bearer API key (#10313)", async () => {

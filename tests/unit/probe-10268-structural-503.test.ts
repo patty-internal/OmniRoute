@@ -45,7 +45,7 @@ test("#10268: 2nd structurally-heavy agent request is rejected 503 (chat_admissi
     const body = await res.json();
     assert.equal(
       body.error?.message,
-      "Structurally heavy chat request capacity is busy; retry shortly."
+      "Local chat admission capacity is busy for this structurally heavy request; upstream provider routing was not attempted. Retry shortly."
     );
     assert.equal(body.error?.code, "chat_admission_busy");
     assert.equal(body.error?.reason, "structure_limit");

@@ -48,7 +48,7 @@ async function resetStorage() {
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
       if (fs.existsSync(TEST_DATA_DIR)) {
-        fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+        fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       }
       break;
     } catch (error: unknown) {
@@ -129,7 +129,7 @@ test.after(async () => {
   apiKeysDb.resetApiKeyState();
   costRules.resetCostData();
   coreDb.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 // ─── Replicate the isWithinSchedule logic for pure unit testing ───────────────
@@ -515,6 +515,37 @@ test("enforceApiKeyPolicy rejects disallowed models and exhausted budgets", asyn
   );
   assert.equal(overBudget.rejection.status, 429);
   assert.match(await readErrorMessage(overBudget.rejection), /Daily budget exceeded/);
+});
+
+test("enforceApiKeyPolicy applies blockedModels in all-access mode", async () => {
+  const key = await createKeyWithPolicy({
+    modelAccessMode: "all",
+    allowedModels: [],
+    blockedModels: ["gpt-6*", "*/gpt-6*"],
+  });
+  const policy = await loadPolicy("all-mode-blocked-models");
+
+  const blocked = await policy.enforceApiKeyPolicy(
+    makePolicyRequest(key.key),
+    "mbrouter/gpt-6-codex"
+  );
+  assert.equal(blocked.rejection.status, 403);
+
+  const allowed = await policy.enforceApiKeyPolicy(
+    makePolicyRequest(key.key),
+    "mbrouter/gpt-5.6-sol"
+  );
+  assert.equal(allowed.rejection, null);
+
+  const metadata = await apiKeysDb.getApiKeyMetadata(key.key);
+  assert.ok(metadata);
+  const rerouted = await policy.validateApiKeyRoutingTarget(
+    makePolicyRequest(key.key),
+    key.key,
+    metadata,
+    "gpt-6"
+  );
+  assert.equal(rerouted?.status, 403);
 });
 
 test("enforceApiKeyPolicy returns Anthropic error envelope for /v1/messages model denials", async () => {

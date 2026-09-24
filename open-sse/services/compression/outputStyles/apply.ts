@@ -1,9 +1,10 @@
-import { SHARED_BOUNDARIES, shouldBypassCavemanOutputMode } from "../outputMode.ts";
 import {
-  bodyHasSystemInstructionMarker,
-  injectSystemInstructionOnce,
-  type SystemInstructionBody,
-} from "../systemInstruction.ts";
+  placeSystemInstruction,
+  SHARED_BOUNDARIES,
+  shouldBypassCavemanOutputMode,
+  systemFieldIncludesMarker,
+} from "../outputMode.ts";
+import { detectCompressionLanguage } from "../languageDetector.ts";
 import { OUTPUT_STYLE_IDS, outputStyleMeta } from "./catalog.ts";
 
 export type OutputStyleLevel = "lite" | "full" | "ultra";
@@ -13,16 +14,69 @@ export interface OutputStyleSelectionEntry {
   level: OutputStyleLevel;
 }
 
+interface ChatMessage {
+  role: string;
+  content?: string | unknown[];
+  [key: string]: unknown;
+}
+
+interface ChatRequestBody {
+  messages?: ChatMessage[];
+  instructions?: string;
+  input?: unknown;
+  [key: string]: unknown;
+}
+
 export interface OutputStylesResult {
-  body: SystemInstructionBody;
+  body: ChatRequestBody;
   applied: boolean;
   skippedReason?: string;
   /** The styles actually injected (after unknown/locale filtering), in catalog order. */
   appliedStyles?: OutputStyleSelectionEntry[];
 }
 
-export interface OutputStylesOptions {
-  marker?: string;
+interface OutputStyleLanguageConfig {
+  enabled?: boolean;
+  autoDetect?: boolean;
+  defaultLanguage?: string;
+}
+
+function lastUserText(body: ChatRequestBody): string {
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message?.role !== "user") continue;
+    if (typeof message.content === "string" && message.content.trim()) return message.content;
+    if (Array.isArray(message.content)) {
+      const text = message.content
+        .map((part) =>
+          part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string"
+            ? (part as { text: string }).text
+            : ""
+        )
+        .join(" ")
+        .trim();
+      if (text) return text;
+    }
+  }
+  return "";
+}
+
+/**
+ * Resolve which language the output-style instructions inject in.
+ * Disabled → en. autoDetect → language of the latest user message (the input
+ * engines already use the same detector); otherwise the configured default.
+ */
+export function resolveOutputStyleLanguage(
+  languageConfig: OutputStyleLanguageConfig | undefined,
+  body: ChatRequestBody
+): string {
+  if (languageConfig?.enabled !== true) return "en";
+  if (languageConfig.autoDetect === true) {
+    const text = lastUserText(body);
+    if (text) return detectCompressionLanguage(text);
+  }
+  return languageConfig.defaultLanguage || "en";
 }
 
 /** Single idempotency marker guarding the unified injection (D-A: one marker for all styles). */
@@ -69,8 +123,13 @@ function buildStyleInstructions(resolved: OutputStyleSelectionEntry[], language:
  * - Single idempotency marker; re-applying is a no-op.
  * - Content bypass runs once across the whole turn (all-or-nothing); reason recorded.
  */
+export interface OutputStylesOptions {
+  /** Fork (ponytail): inject under a custom idempotency marker instead of OUTPUT_STYLE_MARKER. */
+  marker?: string;
+}
+
 export function applyOutputStyles(
-  body: SystemInstructionBody,
+  body: ChatRequestBody,
   selection: OutputStyleSelectionEntry[],
   language = "en",
   options: OutputStylesOptions = {}
@@ -87,23 +146,46 @@ export function applyOutputStyles(
   const instruction = `${marker}\n${combined}`;
 
   const messages = Array.isArray(body.messages) ? body.messages : null;
-  if (bodyHasSystemInstructionMarker(body, marker)) {
-    return { body, applied: false, skippedReason: "already_applied" };
+  if (!messages || messages.length === 0) {
+    if (typeof body.instructions === "string") {
+      if (body.instructions.includes(marker)) {
+        return { body, applied: false, skippedReason: "already_applied" };
+      }
+      return {
+        body: { ...body, instructions: `${body.instructions.trim()}\n\n${instruction}` },
+        applied: true,
+        appliedStyles: resolved,
+      };
+    }
+    if (typeof body.input === "string" || Array.isArray(body.input)) {
+      return {
+        body: { ...body, instructions: instruction },
+        applied: true,
+        appliedStyles: resolved,
+      };
+    }
+    return { body, applied: false, skippedReason: "no_messages" };
   }
 
-  if (!messages || messages.length === 0) {
-    const injected = injectSystemInstructionOnce(body, marker, instruction);
-    return injected.applied
-      ? { body: injected.body, applied: true, appliedStyles: resolved }
-      : { body, applied: false, skippedReason: injected.skippedReason };
-  }
+  // Idempotency before bypass so an already-injected marker (which contains
+  // SHARED_BOUNDARIES keywords) cannot trigger a false-positive bypass.
+  const alreadyApplied =
+    systemFieldIncludesMarker(body.system, marker) ||
+    messages.some(
+      (message) =>
+        message.role === "system" &&
+        typeof message.content === "string" &&
+        message.content.includes(marker)
+    );
+  if (alreadyApplied) return { body, applied: false, skippedReason: "already_applied" };
 
   // Content bypass (all-or-nothing for the turn): reuse the existing rules verbatim.
   const bypass = shouldBypassCavemanOutputMode(messages);
   if (bypass) return { body, applied: false, skippedReason: bypass };
 
-  const injected = injectSystemInstructionOnce(body, marker, instruction);
-  return injected.applied
-    ? { body: injected.body, applied: true, appliedStyles: resolved }
-    : { body, applied: false, skippedReason: injected.skippedReason };
+  return {
+    body: { ...body, ...placeSystemInstruction(messages, body.system, instruction) },
+    applied: true,
+    appliedStyles: resolved,
+  };
 }

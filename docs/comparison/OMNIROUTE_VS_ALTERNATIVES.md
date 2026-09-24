@@ -22,7 +22,7 @@ Objective feature comparison vs popular open-source AI routers.
 | **Tier 1/2/3 fallback (subscription→cheap→free)**  |                   ✅ + UI                   |     manual     |        n/a        |   manual    |
 | **Token compression**                              | 12-engine stack (RTK + Caveman + LLMLingua) |      none      |       none        |    none     |
 | **Multimodal generation (speech/music/video)**     |                     ✅                      |       ❌       |    passthrough    |     ❌      |
-| **Built-in MCP server**                            |           ✅ 107 tools, 32 scopes           |       ❌       |        ❌         |     ❌      |
+| **Built-in MCP server**                            |           ✅ 110 tools, 33 scopes           |       ❌       |        ❌         |     ❌      |
 | **A2A protocol**                                   |                 ✅ 6 skills                 |       ❌       |        ❌         |     ❌      |
 | **Memory (FTS5 + vector)**                         |                     ✅                      |       ❌       |        ❌         |     ❌      |
 | **Guardrails (PII, injection, vision)**            |                     ✅                      |    partial     |        ❌         |   ✅ paid   |
@@ -34,7 +34,7 @@ Objective feature comparison vs popular open-source AI routers.
 | **CLI with system tray (no Electron)**             |                     ✅                      |       ❌       |        n/a        |     n/a     |
 | **CLI machine-ID auto-auth**                       |                     ✅                      |       ❌       |        n/a        |     n/a     |
 | **Dashboard**                                      |                 Next.js 16                  |     basic      |    proprietary    | proprietary |
-| **i18n**                                           |               **43 locales**                |       ❌       |        ❌         |      ⚠      |
+| **i18n**                                           |               **42 locales**                |       ❌       |        ❌         |      ⚠      |
 | **Public agent skills (SKILL.md)**                 |                    ✅ 45                    |       ❌       |        ❌         |     ❌      |
 | **Tunnel support (Cloudflared, Tailscale, Ngrok)** |                     ✅                      |       ❌       |        n/a        |     n/a     |
 | **License**                                        |                     MIT                     |      MIT       |    proprietary    | proprietary |

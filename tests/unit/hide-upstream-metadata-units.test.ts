@@ -49,6 +49,20 @@ function withFlag<T>(value: string | undefined, fn: () => T): T {
   }
 }
 
+// Async variant: applyCatalogPostFilters re-reads the flag after internal awaits
+// (post-variant strip pass), so the env must stay set across the whole promise.
+async function withFlagAsync<T>(value: string | undefined, fn: () => Promise<T>): Promise<T> {
+  const prev = process.env.HIDE_UPSTREAM_METADATA;
+  if (value === undefined) delete process.env.HIDE_UPSTREAM_METADATA;
+  else process.env.HIDE_UPSTREAM_METADATA = value;
+  try {
+    return await fn();
+  } finally {
+    if (prev === undefined) delete process.env.HIDE_UPSTREAM_METADATA;
+    else process.env.HIDE_UPSTREAM_METADATA = prev;
+  }
+}
+
 const META_ARGS = {
   cacheHit: false,
   costUsd: 0.001,
@@ -178,7 +192,7 @@ test("model-cooldown body carries no upstream model identity under the flag", ()
   assert.equal(visible.error.model, "opencode-go/deepseek-v4-pro");
 });
 
-test("/v1/models post-filter strips provider-prefixed ids when the flag is on", () => {
+test("/v1/models post-filter strips provider-prefixed ids when the flag is on", async () => {
   const request = new Request("http://localhost/v1/models");
   const ctx = { connections: [], prefixMode: "dual", aliasToProviderId: {} };
   const models = [
@@ -189,11 +203,15 @@ test("/v1/models post-filter strips provider-prefixed ids when the flag is on", 
     { id: "qtSd/quick" }, // OmniRoute router namespace — stays
   ];
 
-  const hidden = withFlag("true", () => applyCatalogPostFilters(request, [...models], ctx));
+  const hidden = await withFlagAsync("true", () =>
+    applyCatalogPostFilters(request, [...models], ctx)
+  );
   const hiddenIds = hidden.map((m) => m.id);
   assert.deepEqual([...hiddenIds].sort(), ["auto/smart", "claude-fable-5", "qtSd/quick"]);
 
-  const visible = withFlag(undefined, () => applyCatalogPostFilters(request, [...models], ctx));
+  const visible = await withFlagAsync(undefined, () =>
+    applyCatalogPostFilters(request, [...models], ctx)
+  );
   const visibleIds = visible.map((m) => m.id);
   for (const original of models) {
     assert.ok(visibleIds.includes(original.id), `default listing keeps ${original.id}`);

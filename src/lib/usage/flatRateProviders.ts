@@ -2,7 +2,7 @@
  * Flat-rate (subscription / cookie-web) provider classification — issue #5552.
  *
  * Some providers are billed at a flat rate (a subscription or a coding plan),
- * not per token: cookie/web sessions (ChatGPT Web, grok-web, …) are backed by a
+ * not per token: cookie/web sessions (ChatGPT Web (Codex), grok-web, …) are backed by a
  * consumer subscription, and several "Coding Plan" providers (Codex, MiniMax
  * Coding, Kimi Coding, GLM Coding, …) bill a fixed monthly fee. These providers
  * still carry per-token pricing rows (used for pre-flight estimates), so cost
@@ -39,6 +39,7 @@ const FLAT_RATE_SUBSCRIPTION_PROVIDER_IDS: ReadonlySet<string> = new Set([
   "minimax", // "Minimax Coding" plan
   "kimi-coding", // Kimi Coding plan (OAuth)
   "kimi-coding-apikey", // Kimi Coding plan (API-key auth, still flat-rate)
+  "muse-code", // Muse Code subscription (device OAuth minted key or META_API_KEY)
   "xiaomi-mimo", // Xiaomi MiMo plan (issue: "MiMo Token Plan")
   "bailian-coding-plan", // Alibaba Token Plan (legacy provider ID)
   "qwen-cloud-token-plan", // Qwen Cloud Token Plan

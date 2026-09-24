@@ -68,7 +68,7 @@ async function resetStorage(): Promise<void> {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
   fallback.clearAllModelLockouts();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
@@ -76,7 +76,7 @@ test.beforeEach(resetStorage);
 test.after(() => {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("foreign top candidate is skipped and the existing selector chooses the next free candidate", async () => {
@@ -257,13 +257,20 @@ test("managed request distinguishes missing lease from stale generation", async 
   assert.equal(stale?.leaseFenceStale, true);
 });
 
-test("unmanaged selection cannot receive lease-only connections even while free", async () => {
+test("unmanaged selection may receive a lease-capable connection while its lease is FREE", async () => {
+  // #11775: listing a connection in a lease-capable key's allowlist is no longer a
+  // static global reservation — ordinary routing keeps using it until an ACTIVE lease
+  // is held (the ACTIVE case is covered by the tests below).
   const [managed, ordinary] = await Promise.all([seedConnection(1), seedConnection(2)]);
   await seedManagedKey([managed.id]);
   assert.equal((await apiKeysDb.getExclusiveLeaseConnectionIds()).has(managed.id), true);
 
   const selected = await auth.getProviderCredentials("glm", null, null, "glm-4.6");
-  assert.equal(selected?.connectionId, ordinary.id);
+  assert.ok(selected, "unmanaged selection still resolves a connection");
+  assert.ok(
+    [managed.id, ordinary.id].includes(selected.connectionId),
+    `selected ${selected.connectionId} must be one of the two seeded connections`
+  );
 });
 
 test("generic lease selection is provider-neutral across GLM and OpenAI fixtures", async () => {

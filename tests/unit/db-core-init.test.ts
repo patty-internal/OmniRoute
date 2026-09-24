@@ -50,7 +50,7 @@ function makeTempDir(prefix) {
 }
 
 function removePath(targetPath) {
-  fs.rmSync(targetPath, { recursive: true, force: true });
+  fs.rmSync(targetPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
 async function importFresh(modulePath) {
@@ -223,6 +223,12 @@ function createRecoverableDb(sqliteFile) {
       auth_type TEXT,
       name TEXT,
       is_active INTEGER DEFAULT 1,
+      test_status TEXT,
+      error_code TEXT,
+      last_error TEXT,
+      last_error_at TEXT,
+      last_error_type TEXT,
+      last_error_source TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -663,6 +669,12 @@ test(
         name TEXT,
         priority INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
+      test_status TEXT,
+      error_code TEXT,
+      last_error TEXT,
+      last_error_at TEXT,
+      last_error_type TEXT,
+      last_error_source TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );

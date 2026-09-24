@@ -1,6 +1,6 @@
 // Tool-call emulation helpers for web-cookie executors (#5240, #5927).
 //
-// Web-cookie providers (chatgpt-web, perplexity-web, ...) have no native
+// Web-cookie providers (Perplexity Web, Gemini Web, etc.) may have no native
 // function calling. When the OpenAI request carries `tools`, the prompt-side
 // pipeline (`prepareWebToolRequest` in ../services/webProvider/toolPipeline.ts)
 // injects the provider's tool contract (fenced JSON for chatgpt-web, `<tool_call>`
@@ -17,6 +17,8 @@ import {
   buildWebToolPolicyErrorResponse,
   decodeWebToolResponse,
 } from "../services/webProvider/toolPipeline.ts";
+import { buildToolAwareResult } from "../translator/webTools.ts";
+import type { OpenAIToolCall } from "../services/webProvider/types.ts";
 import type { WebToolChoice } from "../services/webProvider/types.ts";
 
 const SSE_HEADERS: Record<string, string> = {
@@ -45,13 +47,31 @@ async function applyToolCallsToJsonResponse(
   try {
     const json = JSON.parse(bodyText);
     const rawContent = json?.choices?.[0]?.message?.content || "";
-    const { content, toolCalls, finishReason, policyViolation } = decodeWebToolResponse(
-      rawContent,
-      requestedTools,
-      idSeed,
-      toolChoice,
-      { fences }
-    );
+    let content: string;
+    let toolCalls: OpenAIToolCall[] | null;
+    let finishReason: string | undefined;
+    let policyViolation: unknown = null;
+    if (fences === true) {
+      // chatgpt-web's JSON-envelope contract: the fork's strict decoder (fenced
+      // JSON, tool-choice policy, fingerprint/nonce binding).
+      ({ content, toolCalls, finishReason, policyViolation } = decodeWebToolResponse(
+        rawContent,
+        requestedTools,
+        idSeed,
+        toolChoice,
+        { fences: true }
+      ));
+    } else {
+      // Tag-contract consumers (maxai / deepseek-web / gitlab / duckduckgo): the
+      // canonical lenient parser (upstream semantics) — fuzzy repair plus the
+      // emitted-name fallback for tag blocks. Upstream's own executor tests
+      // (maxai narration-miss recovery) pin this lenient behavior; the strict
+      // decoder is only for the JSON envelope above.
+      const aware = buildToolAwareResult(rawContent, requestedTools, idSeed);
+      content = aware.content;
+      toolCalls = aware.toolCalls ?? null;
+      finishReason = aware.finishReason;
+    }
     if (policyViolation) {
       return buildWebToolPolicyErrorResponse();
     }
@@ -132,6 +152,7 @@ export async function buildToolModeResponse(
     fences?: boolean;
   }
 ): Promise<Response> {
+  if (!bufferedJson.ok) return bufferedJson;
   const jsonResponse = await applyToolCallsToJsonResponse(
     bufferedJson,
     requestedTools,

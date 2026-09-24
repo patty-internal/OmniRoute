@@ -17,6 +17,8 @@
  * strings (ops/PII leak).
  */
 
+import { isHideUpstreamMetadataEnabled } from "@/shared/utils/featureFlags";
+
 export type ComboOutcomeKind =
   "quality" | "auth" | "rate_limit" | "model" | "provider" | "timeout" | "skipped" | "upstream";
 
@@ -125,6 +127,23 @@ export function formatComboOutcomes(
   return entries.length > 5
     ? `${parts.join("; ")}... (+${entries.length - 5} more)`
     : parts.join("; ");
+}
+
+/**
+ * Fork (HIDE_UPSTREAM_METADATA): opaque per-target count for the terminal combo
+ * message. When the flag is on, model/provider identities must not reach the
+ * client body — the identities stay in server logs either way.
+ */
+export function summarizeComboErrors(
+  comboErrors: Array<{ model: string; status: number }>
+): string {
+  if (comboErrors.length === 0) return "";
+  if (isHideUpstreamMetadataEnabled()) return `${comboErrors.length} target(s) failed`;
+  const detail = comboErrors
+    .slice(0, 5)
+    .map((e) => `${e.model} (${e.status})`)
+    .join(", ");
+  return `${detail}${comboErrors.length > 5 ? `... (+${comboErrors.length - 5})` : ""}`;
 }
 
 /**

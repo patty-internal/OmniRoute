@@ -1,15 +1,19 @@
-import { normalizeResponsesUsageToOpenAI } from "../utils/usageTracking.ts";
+import { pickCacheCreationTokens } from "../utils/pickCacheCreationTokens.ts";
 
 /**
  * Extract usage from non-streaming response body
  * Handles different provider response formats
  */
+import { carryEstimatedUsageMarker } from "../utils/usageTracking.ts";
+
 export function extractUsageFromResponse(responseBody, provider) {
   if (!responseBody || typeof responseBody !== "object") return null;
   const providerId = typeof provider === "string" ? provider.toLowerCase() : "";
   const isClaudeProvider =
     providerId === "claude" ||
     providerId === "anthropic" ||
+    providerId === "vertex" ||
+    providerId === "vertex-partner" ||
     providerId.startsWith("anthropic-compatible");
 
   // OpenAI format (has prompt_tokens / completion_tokens)
@@ -18,7 +22,14 @@ export function extractUsageFromResponse(responseBody, provider) {
     typeof responseBody.usage === "object" &&
     responseBody.usage.prompt_tokens !== undefined
   ) {
-    return {
+    const cacheCreationTokens =
+      responseBody.usage.cache_creation_input_tokens ??
+      responseBody.usage.prompt_tokens_details?.cache_creation_tokens ??
+      responseBody.usage.input_tokens_details?.cache_creation_tokens ??
+      responseBody.usage.prompt_tokens_details?.cache_write_tokens ??
+      responseBody.usage.input_tokens_details?.cache_write_tokens ??
+      responseBody.usage.cache_write_tokens;
+    const openAiUsage = {
       prompt_tokens: responseBody.usage.prompt_tokens || 0,
       completion_tokens: responseBody.usage.completion_tokens || 0,
       // DeepSeek native API uses flat prompt_cache_hit_tokens (NOT
@@ -30,6 +41,17 @@ export function extractUsageFromResponse(responseBody, provider) {
         responseBody.usage.prompt_cache_hit_tokens ??
         responseBody.usage.cached_tokens ??
         responseBody.usage.cache_read_input_tokens,
+      // Cache WRITE tokens. Anthropic models reached through an OpenAI-compatible
+      // endpoint carry the count nested in prompt/input token details (see
+      // translator/response/claude-to-openai.ts, #2215) or under the
+      // `cache_write_tokens` alias used by OpenRouter/Devin/codex-chatgpt-web.
+      // Reading only the flat Anthropic key made the dashboard show "Cache Write:
+      // N/A" for the very same model that reports a real count natively.
+      // Only emit the key when a provider actually reported one, so a provider
+      // with no cache-write concept (plain gpt/codex) stays N/A instead of 0.
+      ...(cacheCreationTokens !== undefined
+        ? { cache_creation_input_tokens: cacheCreationTokens }
+        : {}),
       reasoning_tokens:
         responseBody.usage.completion_tokens_details?.reasoning_tokens ??
         responseBody.usage.output_tokens_details?.reasoning_tokens ??
@@ -44,6 +66,7 @@ export function extractUsageFromResponse(responseBody, provider) {
         ? { cost_in_usd_ticks: responseBody.usage.cost_in_usd_ticks }
         : {}),
     };
+    return carryEstimatedUsageMarker(responseBody.usage, openAiUsage);
   }
 
   // Claude format
@@ -79,14 +102,19 @@ export function extractUsageFromResponse(responseBody, provider) {
     typeof responsesUsage === "object" &&
     (responsesUsage.input_tokens !== undefined || responsesUsage.output_tokens !== undefined)
   ) {
-    const usage = normalizeResponsesUsageToOpenAI(responsesUsage);
     return {
-      prompt_tokens: usage?.prompt_tokens || 0,
-      completion_tokens: usage?.completion_tokens || 0,
+      prompt_tokens: responsesUsage.input_tokens || 0,
+      completion_tokens: responsesUsage.output_tokens || 0,
       cache_read_input_tokens: responsesUsage.cache_read_input_tokens,
-      cached_tokens: usage?.prompt_tokens_details?.cached_tokens,
-      cache_creation_input_tokens: usage?.prompt_tokens_details?.cache_creation_tokens,
-      reasoning_tokens: usage?.completion_tokens_details?.reasoning_tokens,
+      cached_tokens:
+        responsesUsage.input_tokens_details?.cached_tokens ??
+        responsesUsage.prompt_tokens_details?.cached_tokens ??
+        responsesUsage.cache_read_input_tokens,
+      cache_creation_input_tokens: pickCacheCreationTokens(responsesUsage),
+      reasoning_tokens:
+        responsesUsage.output_tokens_details?.reasoning_tokens ??
+        responsesUsage.completion_tokens_details?.reasoning_tokens ??
+        responsesUsage.reasoning_tokens,
     };
   }
 

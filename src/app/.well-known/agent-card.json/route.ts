@@ -23,7 +23,7 @@ const PACKAGE_VERSION = process.env.npm_package_version || "1.8.1";
  *
  * Returns the OmniRoute Agent Card (A2A v1.0).
  */
-export async function GET(request: NextRequest) {
+export async function GET(request?: NextRequest) {
   const fleetSkills = await getFleetSkills();
   const baseUrl = getBaseUrl(request);
 
