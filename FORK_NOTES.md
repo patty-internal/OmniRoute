@@ -4,7 +4,7 @@ This is the canonical record of **what we changed or configured that is not pres
 
 It covers two classes of change:
 
-1. **Fork source changes** — committed code in `patrickrho-patty/OmniRoute`, branch `custom-features`.
+1. **Fork source changes** — committed code in `patrickrho-patty/OmniRoute`, branch `patty`.
 2. **Operational/client customizations** — live-server config, Cloudflare setup, pi/OpenCode configs, and migration scripts. These are not upstream source commits, so their "commit" field is marked **external state / no repo commit**.
 
 Keep this file updated whenever we add a new fork-only source patch or a production/client customization that future migrations depend on.
@@ -17,15 +17,15 @@ Keep this file updated whenever we add a new fork-only source patch or a product
 | ----------------------------------- | --------------------------------------------------------------------- |
 | Upstream repo                       | `github.com/diegosouzapw/OmniRoute`                                   |
 | Fork remote                         | `git@github.com:patrickrho-patty/OmniRoute.git`                       |
-| Fork branch carrying source patches | `custom-features`                                                     |
+| Fork branch carrying source patches | `patty` (successor of the retired `custom-features` branch)            |
 | Upstream baseline                   | `v3.8.38` (`7b139fdb5`) — rebased 2026-06-28                          |
 | Current deploy HEAD                 | `3b5810bd4` (deployed to `jebo.ai` 2026-06-30)                        |
 | Source divergence                   | ~25 commits ahead of upstream v3.8.38                                 |
-| Pushed to GitHub                    | Yes — `custom-features` pushed to origin                              |
+| Pushed to GitHub                    | Yes — `patty` pushed to origin                                        |
 | VPS                                 | Contabo `109.123.231.227` (24 GB RAM, 8 CPU, 774 GB disk), port 12160 |
 | Previous VPS                        | Oracle `161.33.162.164` (1 GB RAM), decommissioned                    |
 
-Fork source patch commits on `custom-features` (most recent first):
+Fork source patch commits (most recent first) — these originally landed on the retired `custom-features` branch; its full history is contained in `patty`:
 
 | Commit      | Title                                                                                      | Docs        |
 | ----------- | ------------------------------------------------------------------------------------------ | ----------- |
@@ -50,7 +50,7 @@ Fork source patch commits on `custom-features` (most recent first):
 | `a55966c3b` | fix(compression): LLMLingua Worker path fix for Node 22                                    | SRC-009     |
 | `aeab40d15` | feat(compression): add Microsoft + Arcoldd LLMLingua ONNX models                           | SRC-010     |
 
-`main` in this fork is intentionally kept identical to upstream `main`; our deploy branch is `custom-features`.
+`main` in this fork is intentionally kept identical to upstream `main`; our deploy branch is `patty`. The older `custom-features` branch is retired — `patty` contains all of it and is the branch that receives upstream syncs and new fork patches.
 
 ---
 
@@ -311,7 +311,7 @@ Cloudflare SSL mode is **Flexible**. TLS terminates at Cloudflare. A Cloudflare 
 The new VPS builds from source (cloned repo at `/opt/OmniRoute`), unlike the old VPS which used rsync of a standalone bundle. Deploy flow:
 
 ```bash
-cd /opt/OmniRoute && git pull origin custom-features && npm run build && systemctl restart omniroute.service
+cd /opt/OmniRoute && git pull origin patty && npm run build && systemctl restart omniroute.service
 ```
 
 #### Previous VPS (decommissioned)
@@ -750,7 +750,7 @@ Restores/builds on a fresh Ubuntu VPS:
 
 1. Installs Node 22
 2. Clones `patrickrho-patty/OmniRoute`
-3. Checks out `custom-features`
+3. Checks out `patty`
 4. Runs `npm install` and `npm run build`
 5. Installs globally
 6. Restores `.env` files and SQLite DB
@@ -814,14 +814,14 @@ git fetch upstream
 git switch main
 git merge upstream/main --ff-only
 
-git switch custom-features
+git switch patty
 git rebase main
 ```
 
 After rebase, verify:
 
 ```bash
-git diff --name-only main..custom-features
+git diff --name-only main..patty
 # should include only intentional fork files
 
 # Claude Messages branch still exists
