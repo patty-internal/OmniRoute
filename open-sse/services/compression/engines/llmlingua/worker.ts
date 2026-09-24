@@ -33,6 +33,7 @@
 import { Worker } from "node:worker_threads";
 import path from "node:path";
 import fs from "node:fs";
+import { pathToFileURL } from "node:url";
 
 import { LLMLINGUA_WORKER_TIMEOUT_MS, LLMLINGUA_WORKER_IDLE_MS } from "./constants.ts";
 import { resolveLlmlinguaModel } from "./modelStore.ts";
@@ -195,7 +196,6 @@ export function resolveWorkerFile(): { workerFile: string; execArgv: string[] } 
 /** Reset the idle eviction timer; terminates the worker after the idle window. */
 function bumpIdleTimer(): void {
   if (idleTimer) clearTimeout(idleTimer);
-  if (LLMLINGUA_WORKER_IDLE_MS <= 0) return;
   idleTimer = setTimeout(() => {
     resetWorker();
   }, LLMLINGUA_WORKER_IDLE_MS);
@@ -234,7 +234,12 @@ function ensureWorker(): Worker {
 
   const { workerFile, execArgv } = resolveWorkerFile();
   const absoluteWorkerFile = path.resolve(workerFile);
-  const w = new Worker(absoluteWorkerFile, { execArgv });
+  // Pass the URL OBJECT, not `.href`. `new Worker()` treats a plain string as a
+  // filesystem path, so a "file://..." string is looked up literally and throws
+  // ERR_WORKER_PATH (a string arg must start with ./ or ../). Only a URL instance
+  // is interpreted as a file: URL. Spawn failures are swallowed by pump()'s catch,
+  // so getting this wrong silently disables compression instead of erroring.
+  const w = new Worker(pathToFileURL(absoluteWorkerFile), { execArgv });
 
   w.on("message", (reply: WorkerReply) => {
     const entry = pending.get(reply.id);

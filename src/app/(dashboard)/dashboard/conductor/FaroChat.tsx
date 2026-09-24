@@ -60,8 +60,11 @@ export default function FaroChat() {
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSttModel(safeGet(STT_KEY, "openai/whisper-1"));
-    setTtsModel(safeGet(TTS_KEY, "openai/tts-1"));
+    void (async () => {
+      await Promise.resolve();
+      setSttModel(safeGet(STT_KEY, "openai/whisper-1"));
+      setTtsModel(safeGet(TTS_KEY, "openai/tts-1"));
+    })();
   }, []);
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });

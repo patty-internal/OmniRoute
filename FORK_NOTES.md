@@ -4,7 +4,7 @@ This is the canonical record of **what we changed or configured that is not pres
 
 It covers two classes of change:
 
-1. **Fork source changes** — committed code in `patrickrho-patty/OmniRoute`, branch `custom-features`.
+1. **Fork source changes** — committed code in `patrickrho-patty/OmniRoute`, branch `patty`.
 2. **Operational/client customizations** — live-server config, Cloudflare setup, pi/OpenCode configs, and migration scripts. These are not upstream source commits, so their "commit" field is marked **external state / no repo commit**.
 
 Keep this file updated whenever we add a new fork-only source patch or a production/client customization that future migrations depend on.
@@ -13,19 +13,19 @@ Keep this file updated whenever we add a new fork-only source patch or a product
 
 ## Current git state
 
-| Item                                | Value                                                                 |
-| ----------------------------------- | --------------------------------------------------------------------- |
-| Upstream repo                       | `github.com/diegosouzapw/OmniRoute`                                   |
-| Fork remote                         | `git@github.com:patrickrho-patty/OmniRoute.git`                       |
-| Fork branch carrying source patches | `custom-features`                                                     |
-| Upstream baseline                   | `v3.8.38` (`7b139fdb5`) — rebased 2026-06-28                          |
-| Current deploy HEAD                 | `3b5810bd4` (deployed to `jebo.ai` 2026-06-30)                        |
-| Source divergence                   | ~25 commits ahead of upstream v3.8.38                                 |
-| Pushed to GitHub                    | Yes — `custom-features` pushed to origin                              |
-| VPS                                 | Contabo `109.123.231.227` (24 GB RAM, 8 CPU, 774 GB disk), port 12160 |
-| Previous VPS                        | Oracle `161.33.162.164` (1 GB RAM), decommissioned                    |
+| Item                                | Value                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| Upstream repo                       | `github.com/diegosouzapw/OmniRoute`                                            |
+| Fork remote                         | `git@github.com:patrickrho-patty/OmniRoute.git`                                |
+| Fork branch carrying source patches | `patty` (successor of the retired `custom-features` branch)                    |
+| Upstream baseline                   | `release/v3.8.51` (`6b8c5df66f`) — merged 2026-09-24 (merge commit on `patty`) |
+| Current deploy HEAD                 | `3b5810bd4` (deployed to `jebo.ai` 2026-06-30)                                 |
+| Source divergence                   | merge with upstream v3.8.51 (+1,668 upstream commits since 2026-08-25 base)    |
+| Pushed to GitHub                    | Yes — `patty` pushed to origin                                                 |
+| VPS                                 | Contabo `109.123.231.227` (24 GB RAM, 8 CPU, 774 GB disk), port 12160          |
+| Previous VPS                        | Oracle `161.33.162.164` (1 GB RAM), decommissioned                             |
 
-Fork source patch commits on `custom-features` (most recent first):
+Fork source patch commits (most recent first) — these originally landed on the retired `custom-features` branch; its full history is contained in `patty`:
 
 | Commit      | Title                                                                                      | Docs        |
 | ----------- | ------------------------------------------------------------------------------------------ | ----------- |
@@ -50,7 +50,7 @@ Fork source patch commits on `custom-features` (most recent first):
 | `a55966c3b` | fix(compression): LLMLingua Worker path fix for Node 22                                    | SRC-009     |
 | `aeab40d15` | feat(compression): add Microsoft + Arcoldd LLMLingua ONNX models                           | SRC-010     |
 
-`main` in this fork is intentionally kept identical to upstream `main`; our deploy branch is `custom-features`.
+`main` in this fork is intentionally kept identical to upstream `main`; our deploy branch is `patty`. The older `custom-features` branch is retired — `patty` contains all of it and is the branch that receives upstream syncs and new fork patches.
 
 ---
 
@@ -311,7 +311,7 @@ Cloudflare SSL mode is **Flexible**. TLS terminates at Cloudflare. A Cloudflare 
 The new VPS builds from source (cloned repo at `/opt/OmniRoute`), unlike the old VPS which used rsync of a standalone bundle. Deploy flow:
 
 ```bash
-cd /opt/OmniRoute && git pull origin custom-features && npm run build && systemctl restart omniroute.service
+cd /opt/OmniRoute && git pull origin patty && npm run build && systemctl restart omniroute.service
 ```
 
 #### Previous VPS (decommissioned)
@@ -750,7 +750,7 @@ Restores/builds on a fresh Ubuntu VPS:
 
 1. Installs Node 22
 2. Clones `patrickrho-patty/OmniRoute`
-3. Checks out `custom-features`
+3. Checks out `patty`
 4. Runs `npm install` and `npm run build`
 5. Installs globally
 6. Restores `.env` files and SQLite DB
@@ -804,6 +804,74 @@ but Contabo is still recommended).
 
 ---
 
+## v3.8.51 sync record (2026-09-24)
+
+Merged upstream `release/v3.8.51` tip `6b8c5df66f` into `patty` (336 conflicted paths).
+Rulebook used: R1 workflows stay deleted · R2 upstream deletions win · R3 docs/i18n theirs +
+Patty rebrand · R4 locale JSON deep-union · R5 quality baselines theirs · R6 package.json
+union (kept `pretendard`) · R7 ask-when-ambiguous.
+
+Key resolutions:
+
+- **chatgpt-web**: took upstream's clean-room rewrite (#12239, 51-line executor shim).
+  Fork's 4,085-line executor retired; the fork-only service stack
+  (`chatgptClearance`, `chatgptConversationCache`, `chatgptImageUpload`,
+  `chatgptTlsClient`) is DELETED with it — upstream's #11754 retirement tripwire
+  (`chatgpt-web-source-retirement.test.ts`) forbids those paths, and the services
+  had no live callers. Git history (`patty` pre-merge) is the resurrection path.
+- **chatCore.ts** (47 hunks): imports unioned; upstream's restructured refresh/error/
+  tool-loop/pipeline flow taken; fork grafts re-applied — patty settlement +
+  publicModel echo in the non-streaming tail, `pattySettlement` in
+  `assembleStreamingPipeline`, HIDE_UPSTREAM_METADATA malformed-502 message,
+  chatgpt-web dedup exclusion on top of upstream's GHSA-6c7w-56xp-wpc6 namespacing.
+- **HIDE_UPSTREAM_METADATA combo redaction** re-applied into upstream's extracted
+  modules (`combo/comboAttemptLoop.ts`, `combo/roundRobinCombo.ts`, helper
+  `summarizeComboErrors` in `combo/comboErrorAggregation.ts`).
+- **Migration collision**: fork `164_patty_settlement_outbox` renumbered to `187`
+  (upstream took 164 for `retire_microsoft_designer_web`). Ledger rehome registered in
+  `RENAMED_MIGRATION_COMPATIBILITY`; guard `isSchemaAlreadyApplied` case `"187"`.
+- **usageTracking/usageExtractor**: Responses-API usage extraction now reads the raw
+  wire usage (upstream shape, `pickCacheCreationTokens` alias handling) at both the
+  streaming and non-streaming call sites; the fork's `normalizeResponsesUsageToOpenAI`
+  stays exported for its remaining importers.
+- **web tool parsing (two layers)**: `chatgptWebTools.buildToolModeResponse` uses the
+  canonical LENIENT parser (`buildToolAwareResult`) for tag-contract executors
+  (maxai/deepseek-web/gitlab/duckduckgo — upstream tests pin the emitted-name fallback)
+  and the fork's STRICT decoder (`decodeWebToolResponse`) only for chatgpt-web's fenced
+  JSON envelope. The 401-era strict-everywhere refactor broke upstream's maxai
+  narration-miss recovery.
+- **compression plan resolution**: upstream's lossy-request policy IS wired
+  (`applyLossyRequestPolicy` on every non-header plan — toggles are capability, the
+  `allow-lossy` header is intent); whole-body resultMemo wired behind the explicit
+  `memoizeCompressionResults` flag + principalId + deterministic mode (off by default —
+  incremental cache stays primary); fork's `autoTriggerPlan` enginesExplicit guard
+  restored (auto-trigger must not resurrect a disabled engine).
+- **responses-ws-proxy**: upstream's replace-in-flight-turn semantics adopted — the
+  fork's 409 "turn in progress" gate removed (the new prepare releases the previous
+  turn's lease by design).
+- **public/sw.js**: upstream's service-worker logic (#11779 navigation fallback,
+  cache-name-based cleanup, pathIsExcluded) with fork branding constants (CACHE_NAME
+  v4, versioned Patty icons, /offline shell) and the fork's Patty push handler.
+- **duckduckgo**: DUCKDUCKGO_BASE = duck.ai (upstream's live-verified host; the merge
+  had wrongly kept patty's duckduckgo.com).
+- **gitlab**: upstream's #12958 widened 403 fallback grafted onto the fork's
+  webProvider toolPipeline executor.
+- **chat-body-admission**: fork's bounded-wait API superseded by upstream's
+  `chatAdmissionRelease.ts`; test taken from upstream.
+
+Known non-blocking reds (inherited, NOT fixed here):
+
+- `src/lib/services/cliproxyAccountHealth.ts(157,5)` typecheck error — pure upstream
+  file, part of upstream base-red issue diegosouzapw/OmniRoute#14547.
+- `scripts/i18n/check-key-completeness.mjs` — failing on both sides pre-merge (upstream
+  en adds unlocalized keys; fork locales carry legacy `endpoint.tokenSaver*` extras).
+
+Follow-ups (not in this merge):
+
+- Fork's inline tool-limit detection (`toolLimitDetector.ts` call sites) was dropped
+  with upstream's chatCore restructure — module still present, call sites not re-wired.
+- `pl/docs/guides/PWA_GUIDE.md` mentions `omniroute-pwa-v3` (translation lag; sw.js is v4).
+
 ## Rebase procedure for future upstream releases
 
 When upstream releases a new version:
@@ -814,14 +882,14 @@ git fetch upstream
 git switch main
 git merge upstream/main --ff-only
 
-git switch custom-features
+git switch patty
 git rebase main
 ```
 
 After rebase, verify:
 
 ```bash
-git diff --name-only main..custom-features
+git diff --name-only main..patty
 # should include only intentional fork files
 
 # Claude Messages branch still exists

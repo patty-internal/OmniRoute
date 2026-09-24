@@ -15,6 +15,9 @@ const LANGUAGE_HINTS: Record<string, RegExp[]> = {
   ],
   ja: [/[\u3040-\u30ff]/],
   ko: [/[\uac00-\ud7af]/, /\b(?:코드|파일|오류|에러|수정|확인|설명|감사)\b/i],
+  hu: [
+    /\b(?:kérlek|tudnád|szeretném|magyarázd|mutasd|miért|hogyan|függvény|beállítás|adatbázis|következő|problémám|megoldani|hiba|fájl)\b/i,
+  ],
   id: [/\b(?:saya|kamu|anda|dengan|untuk|yang|tidak|bisa|terima\s+kasih|dari)\b/i],
 };
 

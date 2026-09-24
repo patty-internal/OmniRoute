@@ -11,7 +11,8 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const STORAGE_KEY = "omniroute-vscode-copilot-banner-dismissed-v1";
-const MARKETPLACE_URL = "https://link.omniroute.online/vsx";
+const MARKETPLACE_URL =
+  "https://marketplace.visualstudio.com/items?itemName=diegosouzapw.omnicopilot";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 

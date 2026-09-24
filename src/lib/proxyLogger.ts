@@ -7,8 +7,27 @@
  * Pattern follows callLogs.js (T-15 decomposition).
  */
 import { v4 as uuidv4 } from "uuid";
+import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/errorSanitization.ts";
 import { getDbInstance, isCloud, isBuildPhase } from "./db/core";
 import { ensureProxyLogsColumns } from "./db/schemaColumns";
+
+/**
+ * Canonical host normalization for proxy log writes and (host, port) lookups:
+ * trim, strip exactly one pair of surrounding brackets from IPv6 literals
+ * ("[2001:db8::1]"), re-trim, lowercase. Anything that is not a non-empty
+ * string normalizes to null so readers can fall back to today's behavior.
+ */
+export function normalizeProxyHostForLog(host: unknown): string | null {
+  if (typeof host !== "string") return null;
+  const trimmed = host.trim();
+  if (!trimmed) return null;
+  const unbracketed =
+    trimmed.startsWith("[") && trimmed.endsWith("]") && trimmed.length > 2
+      ? trimmed.slice(1, -1).trim()
+      : trimmed;
+  if (!unbracketed) return null;
+  return unbracketed.toLowerCase();
+}
 
 const shouldPersistToDisk = !isCloud && !isBuildPhase;
 
@@ -18,6 +37,9 @@ interface ProxyInfo {
   type: string;
   host: string;
   port: number | string;
+  /** Registry name (e.g. `murphy-eu-fr`) — carried by registry resolution so the
+   *  proxy log can identify a leg even when many entries share host:port. */
+  name?: string;
 }
 
 interface ProxyLogEntry {
@@ -38,8 +60,18 @@ interface ProxyLogEntry {
   error: string | null;
   connectionId: string | null;
   comboId: string | null;
+  // `account` is the configured connection id prefix (connectionId slice);
+  // `rotationAccount` is the masked id of the rotation account that served the
+  // request (multi-account anonymous rotation only, null otherwise). Both stay
+  // masked prefixes — never a full account id.
   account: string | null;
+  /** Masked serving-account id of the rotation executor (null unless set). */
+  rotationAccount: string | null;
+  /** Request correlation id shared with call_logs (null unless set). */
+  correlationId: string | null;
   tlsFingerprint: boolean;
+  /** HTTP status the provider actually returned; null when no response was received. */
+  upstreamStatus: number | null;
 }
 
 type ProxyLogInput = Partial<ProxyLogEntry> & {
@@ -78,7 +110,12 @@ function loadFromDb() {
         timestamp: row.timestamp,
         status: row.status || "success",
         proxy: row.proxy_host
-          ? { type: row.proxy_type, host: row.proxy_host, port: row.proxy_port }
+          ? {
+              type: row.proxy_type,
+              host: row.proxy_host,
+              port: row.proxy_port,
+              name: row.proxy_name || undefined,
+            }
           : null,
         level: row.level || "direct",
         levelId: row.level_id || null,
@@ -91,7 +128,10 @@ function loadFromDb() {
         connectionId: row.connection_id || null,
         comboId: row.combo_id || null,
         account: row.account || null,
+        rotationAccount: row.rotation_account || null,
+        correlationId: row.correlation_id || null,
         tlsFingerprint: row.tls_fingerprint === 1,
+        upstreamStatus: typeof row.upstream_status === "number" ? row.upstream_status : null,
       });
     }
 
@@ -99,7 +139,10 @@ function loadFromDb() {
       console.log(`[proxyLogger] Loaded ${proxyLogs.length} proxy logs from SQLite`);
     }
   } catch (err: any) {
-    console.warn("[proxyLogger] Failed to load from DB:", err.message);
+    console.warn(
+      "[proxyLogger] Failed to load from DB:",
+      sanitizeErrorMessage(err) || "Proxy log hydration failed"
+    );
   }
 }
 
@@ -130,6 +173,7 @@ export function formatProxyEgressConsoleLine(params: {
   egressIp: string | null;
   level: string;
   proxyHost: string | null | undefined;
+  proxyName?: string | null | undefined;
   status: string;
   includeDetails?: boolean;
 }): string {
@@ -139,21 +183,31 @@ export function formatProxyEgressConsoleLine(params: {
     return `[ProxyEgress] ${provider} status=${status}`;
   }
   const proxy = params.proxyHost ? `:${params.proxyHost}` : "";
+  const name = params.proxyName ? ` name=${params.proxyName}` : "";
   return (
     `[ProxyEgress] ${provider}/${params.account || "-"} ` +
     `in=${params.clientIp || "?"} out=${params.egressIp || "?"} ` +
-    `proxy=${params.level}${proxy} status=${status}`
+    `proxy=${params.level}${proxy}${name} status=${status}`
   );
 }
 
 // ──────────────── Log a proxy event ────────────────
 
 export function logProxyEvent(entry: ProxyLogInput) {
+  const safeError =
+    entry.error === null || entry.error === undefined || entry.error === ""
+      ? null
+      : sanitizeErrorMessage(entry.error) || "Proxy request failed";
   const log: ProxyLogEntry = {
     id: uuidv4(),
     timestamp: new Date().toISOString(),
     status: entry.status || "success",
-    proxy: entry.proxy || null,
+    proxy: entry.proxy
+      ? {
+          ...entry.proxy,
+          host: normalizeProxyHostForLog(entry.proxy.host) ?? entry.proxy.host,
+        }
+      : null,
     level: entry.level || "direct",
     levelId: entry.levelId || null,
     provider: entry.provider || null,
@@ -161,11 +215,14 @@ export function logProxyEvent(entry: ProxyLogInput) {
     clientIp: entry.clientIp ?? entry.publicIp ?? null,
     egressIp: entry.egressIp ?? null,
     latencyMs: entry.latencyMs || 0,
-    error: entry.error || null,
+    error: safeError,
     connectionId: entry.connectionId || null,
     comboId: entry.comboId || null,
     account: entry.account || null,
+    rotationAccount: entry.rotationAccount || null,
+    correlationId: entry.correlationId || null,
     tlsFingerprint: entry.tlsFingerprint || false,
+    upstreamStatus: entry.upstreamStatus ?? null,
   };
 
   // Structured egress line so the operator can confirm, in the proxy logs, which
@@ -179,6 +236,7 @@ export function logProxyEvent(entry: ProxyLogInput) {
         egressIp: log.egressIp,
         level: log.level,
         proxyHost: log.proxy?.host,
+        proxyName: log.proxy?.name,
         status: log.status,
         includeDetails: isProxyLogIncludeIps(),
       })
@@ -253,12 +311,12 @@ export function flushProxyLogsSync() {
   try {
     const db = getDbInstance();
     const insertStmt = db.prepare(
-      `INSERT INTO proxy_logs (id, timestamp, status, proxy_type, proxy_host, proxy_port,
+      `INSERT INTO proxy_logs (id, timestamp, status, proxy_type, proxy_host, proxy_port, proxy_name,
         level, level_id, provider, target_url, public_ip, egress_ip, latency_ms, error,
-        connection_id, combo_id, account, tls_fingerprint)
-      VALUES (@id, @timestamp, @status, @proxyType, @proxyHost, @proxyPort,
+        connection_id, combo_id, account, rotation_account, correlation_id, tls_fingerprint, upstream_status)
+      VALUES (@id, @timestamp, @status, @proxyType, @proxyHost, @proxyPort, @proxyName,
         @level, @levelId, @provider, @targetUrl, @clientIp, @egressIp, @latencyMs, @error,
-        @connectionId, @comboId, @account, @tlsFingerprint)`
+        @connectionId, @comboId, @account, @rotationAccount, @correlationId, @tlsFingerprint, @upstreamStatus)`
     );
 
     const transaction = db.transaction((entries: ProxyLogEntry[]) => {
@@ -270,6 +328,7 @@ export function flushProxyLogsSync() {
           proxyType: item.proxy?.type || null,
           proxyHost: item.proxy?.host || null,
           proxyPort: item.proxy?.port ? Number(item.proxy.port) : null,
+          proxyName: item.proxy?.name || null,
           level: item.level,
           levelId: item.levelId,
           provider: item.provider,
@@ -281,14 +340,20 @@ export function flushProxyLogsSync() {
           connectionId: item.connectionId,
           comboId: item.comboId,
           account: item.account,
+          rotationAccount: item.rotationAccount,
+          correlationId: item.correlationId,
           tlsFingerprint: item.tlsFingerprint ? 1 : 0,
+          upstreamStatus: item.upstreamStatus,
         });
       }
     });
 
     transaction(batch);
   } catch (err: any) {
-    console.warn("[proxyLogger] Failed to write proxy log batch to disk:", err?.message || err);
+    console.warn(
+      "[proxyLogger] Failed to write proxy log batch to disk:",
+      sanitizeErrorMessage(err) || "Proxy log persistence failed"
+    );
   }
 }
 
@@ -326,6 +391,7 @@ export function getProxyLogs(filters: ProxyLogFilters = {}) {
     logs = logs.filter(
       (l) =>
         (l.proxy?.host || "").toLowerCase().includes(q) ||
+        (l.proxy?.name || "").toLowerCase().includes(q) ||
         (l.provider || "").toLowerCase().includes(q) ||
         (l.targetUrl || "").toLowerCase().includes(q) ||
         (l.clientIp || "").toLowerCase().includes(q) ||
@@ -350,7 +416,10 @@ export function clearProxyLogs() {
       const db = getDbInstance();
       db.prepare("DELETE FROM proxy_logs").run();
     } catch (err: any) {
-      console.warn("[proxyLogger] Failed to clear DB:", err.message);
+      console.warn(
+        "[proxyLogger] Failed to clear DB:",
+        sanitizeErrorMessage(err) || "Proxy log cleanup failed"
+      );
     }
   }
 }

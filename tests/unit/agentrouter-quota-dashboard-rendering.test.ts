@@ -21,7 +21,7 @@ function mockAgentrouterFetch(rawQuota: number) {
 /**
  * #10078 follow-up — the original fix wired AgentRouter's balance into
  * getUsageForProvider()/USAGE_SUPPORTED_PROVIDERS (visibility + data path), but the
- * Dashboard Quota UI *renderer* (QuotaCardBody / QuotaCardExpanded under
+ * Dashboard Quota UI *renderer* (QuotaCardExpanded under
  * src/app/(dashboard)/dashboard/usage/components/ProviderLimits/) only formats a
  * quota row as a dollar amount ("$X.XX") when the row carries `isCredits: true` +
  * `currency` + `creditCount` — fields the generic quota-parsing path
@@ -57,7 +57,7 @@ test("#10078: a configured AgentRouter balance renders as a USD credits row in t
   assert.equal(rows.length, 1, `expected exactly one quota row, got: ${JSON.stringify(rows)}`);
   const [row] = rows;
 
-  // These are exactly the fields QuotaCardBody.tsx / QuotaCardExpanded.tsx branch on
+  // These are exactly the fields QuotaCardExpanded.tsx branches on
   // to render a dollar-formatted amount ("$0.50") instead of a bare percentage.
   assert.equal(row.isCredits, true, "renderer only formats USD when isCredits is true");
   assert.equal(row.currency, "USD", "renderer looks up CURRENCY_SYMBOLS[q.currency]");

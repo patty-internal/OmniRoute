@@ -15,7 +15,10 @@ test("response body is a ReadableStream (not a Buffer) — structural check (#90
   );
 
   // The fix uses createReadStream / ReadableStream for streaming the backup file
-  assert.ok(source.includes("createReadStream"), "route must use createReadStream for streaming");
+  assert.ok(
+    source.includes("createReadStream"),
+    "route must use createReadStream for streaming"
+  );
   assert.ok(
     source.includes("ReadableStream"),
     "route must use ReadableStream for the response body"
@@ -58,9 +61,17 @@ test("temp file cleanup on stream completion, error, and abort (#9045)", () => {
     "utf-8"
   );
 
-  // The fix must clean up the temp file on stream completion and client abort
-  assert.ok(source.includes("cleanup"), "route must have a cleanup function for temp file removal");
-  assert.ok(source.includes("unlink("), "route must call unlink on the temp file during cleanup");
+  // The fix must clean up the temp dir on stream completion and client abort
+  // (#12579: the temp path moved from a single unlink-able file to an
+  // fs.mkdtempSync-created directory, so cleanup now recursively removes it)
+  assert.ok(
+    source.includes("cleanup"),
+    "route must have a cleanup function for temp file removal"
+  );
+  assert.ok(
+    source.includes("rm(") || source.includes("unlink("),
+    "route must remove the temp file/dir during cleanup"
+  );
   assert.ok(
     source.includes("abort"),
     "route must clean up temp file on request abort (client disconnect)"

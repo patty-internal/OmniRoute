@@ -155,6 +155,31 @@ Response:
 }
 ```
 
+#### `credentialHealth`: probe-cache vs SQLite `test_status`
+
+`GET /api/monitoring/health` → `credentialHealth` is the **in-memory probe-cache
+gauge**, not a live dump of `provider_connections.test_status`. After #12532 the
+request path reads `getCachedCredentialHealthSummary()` only; background probes
+refresh the cache off the event loop.
+
+| Layer                    | Where                                                                 | What it means                                                                                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Probe-cache gauge        | `credentialHealth.total` / `healthy` / `failed` / `unknown` / `stale` | Last credential-health probe results still held in process memory. `source` is always `probe-cache`.                                                                                                     |
+| Failed connection detail | `credentialHealth.failedConnections`                                  | Present **only when `failed > 0`**. Bounded list of cache rows with `status=error` (`connectionId`, `status`, sanitized `lastError` / `lastErrorType`). `failedOmitted` is set when the list was capped. |
+| SQLite sticky status     | `credentialHealth.staleDbNonOkCount`                                  | Count of **active** (`is_active=1`) connection rows whose persisted `test_status` is a known non-ok (`error`, `expired`, `credits_exhausted`, `banned`, `deactivated`, `unavailable`).                   |
+
+The two layers can disagree on purpose:
+
+- Gauge `failed=0` while `staleDbNonOkCount>0` — SQLite still has a sticky
+  `test_status` (for example `expired` or `credits_exhausted`) that the latest
+  probe-cache snapshot does not count as `status=error`.
+- Gauge `failed>0` while SQLite looks healthy — a recent probe failed and is
+  cached; the DB row has not been updated, or was later cleared.
+
+Do not alert solely on `provider_connections.test_status` when scraping this
+endpoint. Use `failed` + `failedConnections` for live probe failures, and
+`staleDbNonOkCount` when you need the persisted sticky-status count.
+
 ### Kubernetes probe recommendations
 
 OmniRoute is a **single Node process** (one event loop). Stock Docker `HEALTHCHECK` targets lightweight `/healthz`. `/api/monitoring/health` is **too heavy** for kubelet liveness intervals.

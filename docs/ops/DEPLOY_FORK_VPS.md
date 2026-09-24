@@ -8,7 +8,7 @@ lastDeployed: "2026-06-30"
 # Fork VPS Deployment Guide
 
 > This is the **verified runbook** for deploying the `patrickrho-patty/OmniRoute` fork
-> (branch `custom-features`) to the production VPS at `jebo.ai`.
+> (branch `patty`) to the production VPS at `jebo.ai`.
 >
 > Last verified against deploy `3b5810bd4` (bundle tinybert ONNX model) on 2026-06-30.
 > Do not paraphrase the paths/flags — they are load-bearing.
@@ -53,7 +53,7 @@ Client → https://jebo.ai/v1 → Cloudflare edge TLS (Flexible) → Origin Rule
 The entire deploy runs **on the VPS** as a single self-contained script uploaded to
 `/tmp/omniroute-deploy.sh`, kicked off via nohup. Steps:
 
-1. **`git fetch origin custom-features` + `git reset --hard`** — dirty trees on the VPS
+1. **`git fetch origin patty` + `git reset --hard`** — dirty trees on the VPS
    can't abort the update.
 2. **`npm ci`** — installs any new deps before stopping the service, so no downtime yet.
    The bundled TinyBERT ONNX is a normal git blob (54 MB, under GitHub's 100 MB limit),
@@ -166,11 +166,11 @@ When moving to a new VPS (cloning the repo + importing the DB from the old machi
 
 ## Prerequisites
 
-1. **You are on `custom-features`** with the commit you want to deploy pushed to origin:
+1. **You are on `patty`** with the commit you want to deploy pushed to origin:
    ```bash
-   git branch --show-current          # must print: custom-features
+   git branch --show-current          # must print: patty
    git log -1 --format='%H %s'        # confirm the commit
-   git status -sb                     # should show "up to date with origin/custom-features"
+   git status -sb                     # should show "up to date with origin/patty"
    ```
 2. **Clean working tree** for the files you're deploying (`.pi/` untracked is fine — it stays local).
 3. **SSH access works:**
@@ -185,13 +185,13 @@ When moving to a new VPS (cloning the repo + importing the DB from the old machi
 ### 1. Commit & push the branch
 
 Follow `/cap` (or manually commit + push). The deploy must ship a commit that exists on
-`origin/custom-features` so the VPS and GitHub agree:
+`origin/patty` so the VPS and GitHub agree:
 
 ```bash
 git add -A -- . ':!.pi'          # .pi/ stays local
 git commit -m "feat(...): ..."
 git fetch origin
-git push origin custom-features
+git push origin patty
 ```
 
 Record the commit SHA — you'll see it echoed by the deploy script.
@@ -207,7 +207,7 @@ Expected output (truncated):
 ```
 === Deploying to jebo.ai ===
 === DEPLOY START ===           # written by the remote script
-[1/6] Fetching + hard-resetting to origin/custom-features
+[1/6] Fetching + hard-resetting to origin/patty
 [2/6] npm ci
 [3/6] Stopping service
 [4/6] Building (≈8–12 min)
@@ -320,8 +320,8 @@ To roll back to a **specific commit** (not the previous deploy's bundle):
 ```bash
 ssh -i ~/.ssh/t1_fetcher_ed25519 root@109.123.231.227 '
   cd /opt/OmniRoute
-  git fetch origin custom-features
-  git reset --hard origin/custom-features  # only safe if no uncommitted local changes
+  git fetch origin patty
+  git reset --hard origin/patty  # only safe if no uncommitted local changes
   git checkout <OLD_COMMIT>                # or pin to a known-good SHA
   systemctl restart omniroute.service      # no rebuild — code change is minimal? usually NO: rebuild required
 '
@@ -352,7 +352,7 @@ For source-only changes that don't need a rebuild (rare; e.g. config-only): the 
 
 ## When to deploy
 
-- After a new source patch lands on `custom-features` and is pushed to origin.
+- After a new source patch lands on `patty` and is pushed to origin.
 - After an upstream rebase onto a new release (see `FORK_NOTES.md` → Rebase procedure).
 - Do **not** deploy from an uncommitted working tree — the VPS must match a commit on origin.
 
@@ -376,7 +376,7 @@ For source-only changes that don't need a rebuild (rare; e.g. config-only): the 
 
 ```bash
 # === On your Mac ===
-git push origin custom-features                       # already done if you used /cap
+git push origin patty                       # already done if you used /cap
 
 # === One-shot deploy via the script ===
 ./scripts/deploy-vps.sh

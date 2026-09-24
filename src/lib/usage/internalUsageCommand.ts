@@ -99,7 +99,7 @@ async function normalizeDeps(deps: InternalUsageCommandDeps = {}): Promise<Requi
 
 async function getDefaultUsageCommandQuotaPolicy(): Promise<UsageCommandQuotaPolicy> {
   const [{ getCachedSettings }, { resolveResilienceSettings }] = await Promise.all([
-    import("@/lib/localDb"),
+    import("@/lib/db/readCache"),
     import("@/lib/resilience/settings"),
   ]);
   const resilience = resolveResilienceSettings(await getCachedSettings());

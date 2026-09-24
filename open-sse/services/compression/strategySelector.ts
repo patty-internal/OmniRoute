@@ -49,6 +49,8 @@ import {
   withCompressionEntrypointGuards,
   withCompressionEntrypointGuardsAsync,
 } from "./entrypointWrap.ts";
+import { makeMemoKey, memoLookup, memoStore, isDeterministicMode } from "./resultMemo.ts";
+import { applyLossyRequestPolicy } from "./lossyRequestPolicy.ts";
 export { resolveCacheAwareConfig } from "./cacheAwareConfig.ts";
 
 // Re-export so existing importers (resolver test + chatCore dynamic import) keep resolving.
@@ -138,35 +140,48 @@ function resolveBasePlan(
 
   // Phase 3: an explicit, recognized header wins over every operator layer (Decision B).
   // The master switch above is the hard kill: a header cannot turn compression on.
+  let plan: DerivedPlan;
   if (header) {
     const fromHeader = planFromHeader(config, header, combos);
-    if (fromHeader) return fromHeader; // already tagged "request-header"
+    if (fromHeader) {
+      plan = fromHeader; // already tagged "request-header"
+      return applyLossyRequestPolicy(plan, header);
+    }
   }
 
   const comboMode = checkComboOverride(config, comboId);
   if (comboMode) {
     // A routing-combo "stacked" override still wants the configured stacked pipeline,
     // so route it through the resolver (which reads config.stackedPipeline for stacked).
-    return withSource(resolveCompressionPlan(config, { comboId, combos }), "routing-override");
-  }
-
-  // Active profile: an EXPLICIT operator choice. Resolves regardless of enginesExplicit and
-  // above auto-trigger (manual choice beats automatic escalation), but below a routing-combo
-  // override (route-scoped is more specific).
-  if (config.activeComboId && combos[config.activeComboId]) {
-    return withSource(
+    plan = withSource(resolveCompressionPlan(config, { comboId, combos }), "routing-override");
+  } else if (config.activeComboId && combos[config.activeComboId]) {
+    // Active profile: an EXPLICIT operator choice. Resolves regardless of enginesExplicit and
+    // above auto-trigger (manual choice beats automatic escalation), but below a routing-combo
+    // override (route-scoped is more specific).
+    plan = withSource(
       { mode: "stacked", stackedPipeline: combos[config.activeComboId] },
       "active-profile"
     );
+  } else if (!adaptiveEnabled(config) && shouldAutoTrigger(config, estimatedTokens)) {
+    // Fork guard (engine-toggle parity): when the operator explicitly configured the
+    // engines map, auto-trigger must not resurrect a DISABLED engine — autoTriggerPlan
+    // returns null then and selection falls through to the derived default.
+    const auto = autoTriggerPlan(config);
+    if (auto) {
+      plan = withSource(auto, auto.mode === "off" ? "off" : "auto-trigger");
+    } else {
+      const derived = deriveDefaultPlanFromConfig(config, comboId, combos);
+      plan = withSource(derived, derived.mode === "off" ? "off" : "default");
+    }
+  } else {
+    const derived = deriveDefaultPlanFromConfig(config, comboId, combos);
+    plan = withSource(derived, derived.mode === "off" ? "off" : "default");
   }
 
-  if (!adaptiveEnabled(config) && shouldAutoTrigger(config, estimatedTokens)) {
-    const plan = autoTriggerPlan(config);
-    if (plan) return withSource(plan, plan.mode === "off" ? "off" : "auto-trigger");
-  }
-
-  const plan = deriveDefaultPlanFromConfig(config, comboId, combos);
-  return withSource(plan, plan.mode === "off" ? "off" : "default");
+  // Upstream lossy-request policy (#lossyRequestPolicy.ts): engine toggles declare
+  // CAPABILITY, the `allow-lossy` request header declares INTENT — without the header,
+  // lossy steps (rtk/llmlingua) are downgraded out of the plan even when toggled on.
+  return applyLossyRequestPolicy(plan, header);
 }
 
 /**
@@ -315,10 +330,37 @@ function runCompression(
   if (mode === "off") {
     return { body, compressed: false, stats: null };
   }
-  // NOTE: upstream's whole-body resultMemo is intentionally NOT wired here. OmniRoute uses
-  // the per-message incremental cache (services/compression/incremental/*) instead, which
-  // hits the immutable conversation prefix every turn — a whole-body hash misses on every
-  // turn of a growing conversation. See docs/compression/INCREMENTAL_COMPRESSION_ARCHITECTURE.md.
+  // Whole-body resultMemo (#11727 upstream semantics), gated behind an explicit
+  // `config.memoizeCompressionResults === true` + a real principalId + a deterministic
+  // mode. Off by default — the fork's per-message incremental cache
+  // (services/compression/incremental/*) remains the primary caching path for growing
+  // conversations; this flag is for operators/tests that want the whole-body memo.
+  if (
+    options?.config?.memoizeCompressionResults === true &&
+    typeof options?.principalId === "string" &&
+    options.principalId.length > 0 &&
+    isDeterministicMode(mode, options.config)
+  ) {
+    const key = makeMemoKey(
+      body,
+      mode,
+      options.config,
+      options.principalId,
+      options.model,
+      options.supportsVision
+    );
+    const hit = memoLookup(key);
+    if (hit) return hit;
+    const result = runCompression({ ...body }, mode, {
+      ...options,
+      config: { ...options.config, memoizeCompressionResults: false },
+    });
+    // memoStore clones internally, so the cache entry stays isolated from the caller's
+    // live object. Return the caller's own `result`: handing back the stored clone would
+    // let the caller's later mutations corrupt the cache (#11727 semantics).
+    memoStore(key, result);
+    return result;
+  }
   if (mode === "rtk") {
     return applyRtkCompression(body, {
       // Selecting the "rtk" mode IS the enable signal — run it even if the per-engine
@@ -440,6 +482,27 @@ function runCompression(
  * already run in an async context (e.g. chatCore) await this so a future
  * worker-thread engine can await without changing the surrounding code.
  */
+/**
+ * #13145: report a compression-worker fault. The logger is imported lazily and
+ * defensively — `compressionWorker.ts` imports this module, so a static import would pull
+ * the logger into the worker bundle, and a logging failure must never be able to break
+ * compression itself.
+ */
+function logCompressionWorkerFault(error: unknown, retryInProcess: boolean): void {
+  void (async () => {
+    try {
+      const { log } = await import("../../utils/logger.ts");
+      log.warn(
+        "COMPRESSION",
+        `Compression worker failed (${
+          retryInProcess ? "falling back to in-process compression" : "sending uncompressed"
+        }): ${error instanceof Error ? error.message : String(error)}`
+      );
+    } catch {
+      /* logging is best-effort — never let it affect the compression path */
+    }
+  })();
+}
 export async function applyCompressionAsync(
   body: Record<string, unknown>,
   mode: CompressionMode,
@@ -527,12 +590,53 @@ async function runCompressionAsync(
     try {
       const { runCompressionInWorker } = await import("./compressionWorkerPool.ts");
       return await runCompressionInWorker(body, mode, workerOptions, options?.onEngineStep);
-    } catch {
-      return { body, compressed: false, stats: null };
+    } catch (workerError) {
+      // #13145: a worker failure must NOT silently disable compression. Returning the
+      // uncompressed body here made every eligible request bypass the pipeline while the
+      // response header still announced the selected plan ("stacked"), and
+      // compression_analytics stayed empty because nothing ever reported a compressed
+      // result — the failure was invisible at every log level.
+      //
+      // How far to recover depends on WHY the worker failed. A thread error, an exit or an
+      // engine throw fails fast without doing the work, so the in-process path costs the
+      // same as the worker would have and restores compression. A dispatch timeout is the
+      // opposite: the worker already burned its full budget on this body, so re-running the
+      // same CPU-bound pipeline on the main event loop would stall every other in-flight
+      // request. Those keep the old degrade-to-uncompressed behaviour — but are now
+      // reported instead of swallowed, which was the actual defect.
+      const retryInProcess =
+        (workerError as { retryInProcess?: boolean } | null)?.retryInProcess !== false;
+      logCompressionWorkerFault(workerError, retryInProcess);
+      if (!retryInProcess) return { body, compressed: false, stats: null };
     }
   }
-  // NOTE: upstream's whole-body resultMemo is intentionally NOT wired here — the
-  // incremental cache above covers the caching concern (see note in runCompression).
+  // Whole-body resultMemo for the async path — same flag/principal/deterministic gates
+  // as the sync path above (off by default; incremental cache remains primary).
+  if (
+    options?.config?.memoizeCompressionResults === true &&
+    typeof options?.principalId === "string" &&
+    options.principalId.length > 0 &&
+    isDeterministicMode(mode, options.config)
+  ) {
+    const key = makeMemoKey(
+      body,
+      mode,
+      options.config,
+      options.principalId,
+      options.model,
+      options.supportsVision
+    );
+    const hit = memoLookup(key);
+    if (hit) return hit;
+    const result = await runCompressionAsync({ ...body }, mode, {
+      ...options,
+      config: { ...options.config, memoizeCompressionResults: false },
+    });
+    // Same contract as the sync path: store the internal clone; return the caller's own
+    // object so later caller mutations cannot corrupt the cache (#11727 semantics).
+    memoStore(key, result);
+    return result;
+  }
   if (mode === "omniglyph") return applyOmniglyphSingleMode(body, options);
   if (mode === "stacked") {
     // Post-translation format-sensitive engines (currently OmniGlyph) must see

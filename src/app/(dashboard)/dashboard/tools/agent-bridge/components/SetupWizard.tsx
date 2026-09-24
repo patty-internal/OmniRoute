@@ -62,18 +62,21 @@ export function SetupWizard({
   // Fetch detected models when we reach the mappings step
   useEffect(() => {
     if (step === "mappings") {
-      setLoadingModels(true);
-      fetch(`/api/tools/agent-bridge/agents/${target.id}/detected-models`)
-        .then((res) => res.json())
-        .then((data: DetectedModelsResponse) => {
-          setDetectedModels(data.detectedModels || []);
-        })
-        .catch(() => {
-          setDetectedModels([]);
-        })
-        .finally(() => {
-          setLoadingModels(false);
-        });
+      void (async () => {
+        await Promise.resolve();
+        setLoadingModels(true);
+        fetch(`/api/tools/agent-bridge/agents/${target.id}/detected-models`)
+          .then((res) => res.json())
+          .then((data: DetectedModelsResponse) => {
+            setDetectedModels(data.detectedModels || []);
+          })
+          .catch(() => {
+            setDetectedModels([]);
+          })
+          .finally(() => {
+            setLoadingModels(false);
+          });
+      })();
     }
   }, [step, target.id]);
 

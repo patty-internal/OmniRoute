@@ -8,12 +8,11 @@ const {
   admitChatStructure,
   ChatAdmissionController,
   CHAT_HARD_MAX_MESSAGES,
-  _CHAT_ADMISSION_QUEUE_MAX_MS,
-  _CHAT_ADMISSION_MAX_QUEUED_BYTES,
-  _CHAT_LARGE_BODY_BYTES,
+  CHAT_ADMISSION_QUEUE_MAX_MS,
+  CHAT_ADMISSION_MAX_QUEUED_BYTES,
+  CHAT_LARGE_BODY_BYTES,
   releaseChatAdmissionAfterHandler,
-  releaseChatAdmissionWhenStreaming,
-  _releaseChatAdmissionWhenDone,
+  releaseChatAdmissionWhenDone,
   resolveSelfLoopBearer,
 } = admissionModule;
 const { withEarlyStreamKeepalive } = await import("../../open-sse/utils/earlyStreamKeepalive.ts");
@@ -84,7 +83,6 @@ test("small known body is admitted without consuming heavyweight capacity", asyn
 
 test("a byte-light request above the message threshold acquires heavyweight capacity", async () => {
   const controller = new ChatAdmissionController(1);
-
   const result = await admitChatStructure(
     {
       messages: [
@@ -308,7 +306,6 @@ test("non-ASCII strings use a conservative UTF-8 token estimate", async () => {
 test("wide objects exhaust bounded inspection without materializing all property values", async () => {
   const controller = new ChatAdmissionController(1);
   const wide = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`k${index}`, 0]));
-
   const result = await admitChatStructure({ messages: [{ role: "user", content: wide }] }, null, {
     controller,
     maxMessages: 10,
@@ -347,14 +344,20 @@ test("an existing byte-heavy lease is reused for structure-heavy admission", asy
 test("heavyweight admission is atomic and returns retryable 503 at capacity", async () => {
   const controller = new ChatAdmissionController(1);
   const body = JSON.stringify({ messages: [{ role: "user", content: "x".repeat(40) }] });
-  const options = { controller, largeBodyBytes: 32, hardMaxBytes: 1024 };
+  const options = {
+    controller,
+    largeBodyBytes: 32,
+    hardMaxBytes: 1024,
+    // #10437 byte-path: shedding still requires real heap pressure.
+    heapPressureCheck: () => true,
+  };
 
   const first = await admitChatRequest(chatRequest(body), options);
   assert.equal(first.admit, true);
   if (!first.admit) return;
   assert.equal(controller.activeHeavy, 1);
 
-  const second = await admitChatRequest(chatRequest(body), { ...options, waitMs: 0 });
+  const second = await admitChatRequest(chatRequest(body), options);
   assert.equal(second.admit, false);
   if (second.admit) return;
   assert.equal(second.response.status, 503);
@@ -410,7 +413,7 @@ test("unknown or lying-small lengths cannot bypass occupied heavyweight capacity
       controller,
       largeBodyBytes: 32,
       hardMaxBytes: 1024,
-      waitMs: 0,
+      heapPressureCheck: () => true,
     });
     assert.equal(result.admit, false);
     if (!result.admit) assert.equal(result.response.status, 503);
@@ -459,19 +462,15 @@ test("actual bytes enforce hard max despite a lying small content-length", async
   assert.equal(controller.activeHeavy, 0, "hard-cap rejection releases a mid-read lease");
 });
 
-test("stream lifecycle releases the lease on the first byte and exactly once", async () => {
+test("stream lifecycle holds the lease until close and releases exactly once", async () => {
   const controller = new ChatAdmissionController(1);
   const lease = controller.tryAcquireHeavy();
   assert.ok(lease);
-  const encoder = new TextEncoder();
-  const response = releaseChatAdmissionWhenStreaming(
+  const response = releaseChatAdmissionWhenDone(
     new Response(
       new ReadableStream({
         start(streamController) {
-          streamController.enqueue(encoder.encode("data: first\n\n"));
-        },
-        pull(streamController) {
-          streamController.enqueue(encoder.encode("data: second\n\n"));
+          streamController.enqueue(new TextEncoder().encode("data: ok\n\n"));
           streamController.close();
         },
       }),
@@ -479,28 +478,18 @@ test("stream lifecycle releases the lease on the first byte and exactly once", a
     ),
     lease
   );
-  assert.equal(controller.activeHeavy, 1, "lease held until the first byte streams");
-  const reader = response.body!.getReader();
-  const first = await reader.read();
-  assert.equal(new TextDecoder().decode(first.value), "data: first\n\n");
-  assert.equal(
-    controller.activeHeavy,
-    0,
-    "lease freed after first byte while stream is still open"
-  );
-  const second = await reader.read();
-  assert.equal(new TextDecoder().decode(second.value), "data: second\n\n");
-  assert.equal(second.done, false);
-  assert.equal((await reader.read()).done, true);
+  assert.equal(controller.activeHeavy, 1);
+  assert.equal(await response.text(), "data: ok\n\n");
+  assert.equal(controller.activeHeavy, 0);
   lease.release();
-  assert.equal(controller.activeHeavy, 0, "release must be idempotent");
+  assert.equal(controller.activeHeavy, 0);
 });
 
 test("stream cancellation releases the heavyweight lease", async () => {
   const controller = new ChatAdmissionController(1);
   const lease = controller.tryAcquireHeavy();
   assert.ok(lease);
-  const response = releaseChatAdmissionWhenStreaming(
+  const response = releaseChatAdmissionWhenDone(
     new Response(new ReadableStream({ pull() {} }), {
       headers: { "content-type": "text/event-stream" },
     }),
@@ -517,7 +506,7 @@ test("cancelling early keepalive waits for pending handler cleanup before releas
   let resolveHandler!: (response: Response) => void;
   const handler = new Promise<Response>((resolve) => {
     resolveHandler = resolve;
-  }).then((response) => releaseChatAdmissionWhenStreaming(response, lease));
+  }).then((response) => releaseChatAdmissionWhenDone(response, lease));
 
   const outer = await withEarlyStreamKeepalive(handler, { thresholdMs: 0, intervalMs: 250 });
   await outer.body?.cancel("client disconnected");
@@ -551,7 +540,7 @@ test("pre-aborted early keepalive cancels the eventual handler body and releases
   let resolveHandler!: (response: Response) => void;
   const handler = new Promise<Response>((resolve) => {
     resolveHandler = resolve;
-  }).then((response) => releaseChatAdmissionWhenStreaming(response, lease));
+  }).then((response) => releaseChatAdmissionWhenDone(response, lease));
 
   const outer = await withEarlyStreamKeepalive(handler, {
     thresholdMs: 0,
@@ -616,7 +605,7 @@ test("stream read error releases the heavyweight lease", async () => {
   const controller = new ChatAdmissionController(1);
   const lease = controller.tryAcquireHeavy();
   assert.ok(lease);
-  const response = releaseChatAdmissionWhenStreaming(
+  const response = releaseChatAdmissionWhenDone(
     new Response(
       new ReadableStream({
         start(streamController) {
@@ -789,6 +778,7 @@ test("external clients cannot use the bypass header without a trusted self-loop 
       controller,
       largeBodyBytes: 32,
       hardMaxBytes: 10 * 1024 * 1024,
+      heapPressureCheck: () => true,
     });
 
     // Unknown key + bypass header must NOT bypass — capacity is exhausted → 503.
@@ -802,10 +792,15 @@ test("external clients cannot use the bypass header without a trusted self-loop 
 
 // ── self-loop bearer resolution (env-key aware, #1350) ─────────────────
 
-test("resolveSelfLoopBearer falls back to sk_omniroute when no env key is set", () => {
+test("resolveSelfLoopBearer falls back to a random per-process secret when no env key is set (#13679)", () => {
   const restore = withSelfLoopEnv({});
   try {
-    assert.equal(resolveSelfLoopBearer(), "sk_omniroute");
+    // #13679 PR C: the fallback must NOT be the predictable checked-in literal
+    // "sk_omniroute" — it is a per-process random value (dedicated regression test:
+    // tests/unit/chat-admission-selfloop-random-bearer-13679.test.ts).
+    const bearer = resolveSelfLoopBearer();
+    assert.notEqual(bearer, "sk_omniroute");
+    assert.equal(bearer, resolveSelfLoopBearer(), "must be memoized for the process lifetime");
   } finally {
     restore();
   }
@@ -895,6 +890,7 @@ test("sk_omniroute sentinel is rejected once an env key is configured (REQUIRE_A
       controller,
       largeBodyBytes: 32,
       hardMaxBytes: 10 * 1024 * 1024,
+      heapPressureCheck: () => true,
     });
 
     assert.equal(result.admit, false, "sentinel must not bypass when an env key is configured");

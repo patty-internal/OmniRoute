@@ -34,9 +34,11 @@ test("explicit engine toggles outrank stale autoTriggerMode=lite", () => {
   const plan = selectCompressionPlan(baseConfig(), null, 1000);
   assert.equal(plan.source, "default");
   assert.equal(plan.mode, "stacked");
+  // Upstream lossy-request policy: toggles are capability, the allow-lossy header is
+  // intent — without the header the lossy steps (rtk, llmlingua) are downgraded out.
   assert.deepEqual(
     plan.stackedPipeline.map((step) => step.engine),
-    ["session-dedup", "rtk", "llmlingua"]
+    ["session-dedup"]
   );
 });
 

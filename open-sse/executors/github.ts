@@ -331,9 +331,15 @@ export class GithubExecutor extends BaseExecutor {
   ): Record<string, string> {
     const token = this.getCopilotToken(credentials) || credentials.accessToken;
     const initiator = this.resolveInitiatorHeader(clientHeaders);
+    const clientIntegrationId =
+      this.readClientHeader(clientHeaders, "copilot-integration-id") || undefined;
 
     const headers: Record<string, string> = {
-      ...getGitHubCopilotChatHeaders(stream ? "text/event-stream" : "application/json", initiator),
+      ...getGitHubCopilotChatHeaders(
+        stream ? "text/event-stream" : "application/json",
+        initiator,
+        clientIntegrationId ? { integrationId: clientIntegrationId } : undefined
+      ),
       Authorization: `Bearer ${token}`,
       "x-request-id": crypto.randomUUID?.() || randomIdFallback(),
     };

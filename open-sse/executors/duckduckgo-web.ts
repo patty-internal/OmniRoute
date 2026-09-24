@@ -2,6 +2,14 @@ import { Buffer } from "node:buffer";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import vm from "node:vm";
 import { solveDuckDuckGoChallenge, makeDuckDuckGoFeSignals } from "./duckduckgo-web/challenge.ts";
+import {
+  DUCKDUCKGO_DEFAULT_MODEL,
+  DUCKDUCKGO_MODEL_ALIASES,
+  FE_VERSION_PATTERN,
+  extractFreeDuckDuckGoModelIds,
+  normalizeDuckDuckGoModel,
+  pickDuckDuckGoModel,
+} from "./duckduckgo-web/models.ts";
 import { BaseExecutor, type ExecuteInput } from "./base.ts";
 import { FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import {
@@ -14,23 +22,85 @@ import { buildToolModeResponse } from "./chatgptWebTools.ts";
 import type { Session } from "../services/sessionPool/session.ts";
 import { tryBackedChat } from "../services/browserBackedChat.ts";
 import { sanitizeErrorMessage } from "../utils/error.ts";
+import { normalizeSystemRole } from "../services/roleNormalizer.ts";
 
-export const DUCKDUCKGO_BASE = "https://duckduckgo.com";
+export const DUCKDUCKGO_BASE = "https://duck.ai";
 // #4037: the live DuckDuckGo AI Chat backend is served from duckduckgo.com. The
 // status/chat fetches, Origin, and Referer must all use this host so the request's
 // same-origin triplet (host + Origin + Referer) stays consistent with
 // `Sec-Fetch-Site: same-origin`; pointing them at duck.ai produced an inconsistent
 // triplet the backend rejected with HTTP 400.
+// Issue #6999: Lightweight circuit breaker for the DuckDuckGo executor.
+// After CB_THRESHOLD consecutive failures (429, 5xx, or network errors),
+// the breaker "opens" for CB_COOLDOWN_MS — during that window every request
+// fast-fails with 503 instead of hammering the upstream. A single success
+// resets the failure counter. Half-open probing happens naturally: once the
+// cooldown expires the breaker closes and the next request is a real probe.
+export const CB_THRESHOLD = 5;
+export const CB_COOLDOWN_MS = 30_000;
+
+interface CircuitBreakerState {
+  failures: number;
+  openedAt: number;
+}
+
+const circuitBreaker: CircuitBreakerState = { failures: 0, openedAt: 0 };
+
+export function cbIsOpen(): boolean {
+  if (circuitBreaker.openedAt === 0) return false;
+  if (Date.now() - circuitBreaker.openedAt >= CB_COOLDOWN_MS) {
+    // Cooldown elapsed — half-open: allow the next request through.
+    circuitBreaker.openedAt = 0;
+    return false;
+  }
+  return true;
+}
+
+export function cbRecordFailure(): void {
+  circuitBreaker.failures++;
+  if (circuitBreaker.failures >= CB_THRESHOLD && circuitBreaker.openedAt === 0) {
+    circuitBreaker.openedAt = Date.now();
+    console.warn(
+      `[DDG-CB] Circuit breaker opened after ${circuitBreaker.failures} consecutive failures — fast-failing for ${CB_COOLDOWN_MS}ms`
+    );
+  }
+}
+
+export function cbRecordSuccess(): void {
+  if (circuitBreaker.failures > 0) {
+    circuitBreaker.failures = 0;
+  }
+}
+
+// Test-only: direct read/write access to the module-level breaker singleton
+// so tests can exercise open/half-open/closed transitions without waiting
+// CB_COOLDOWN_MS in real time. Not used by production code.
+export function __setDdgCircuitBreakerStateForTests(failures: number, openedAt: number): void {
+  circuitBreaker.failures = failures;
+  circuitBreaker.openedAt = openedAt;
+}
+
+export function __getDdgCircuitBreakerStateForTests(): CircuitBreakerState {
+  return { ...circuitBreaker };
+}
+
+// Primary host moved to https://duck.ai (live-verified 2026-08-26): with the
+// same-origin triplet kept consistent (host + Origin + Referer all duck.ai), the
+// full status -> challenge -> chat flow returns 200 there, and the challenge solver
+// already stamps meta.origin = https://duck.ai, so request host and token origin
+// agree by construction. #4037's HTTP 400 came from a MIXED triplet (duck.ai host
+// with duckduckgo.com Origin/Referer), not from the duck.ai host itself.
+
 const AUTH_TOKEN_URL = `${DUCKDUCKGO_BASE}/duckchat/v1/auth/token`;
 const COUNTRY_URL = `${DUCKDUCKGO_BASE}/country.json`;
 export const STATUS_URL = `${DUCKDUCKGO_BASE}/duckchat/v1/status`;
 export const CHAT_URL = `${DUCKDUCKGO_BASE}/duckchat/v1/chat`;
+// Token-free model list (no VQD/challenge required) used to self-heal catalog drift.
+export const MODELS_URL = `${DUCKDUCKGO_BASE}/duckchat/v1/models`;
 const DEFAULT_FE_VERSION = "serp_20260424_180649_ET-0bdc33b2a02ebf8f235def65d887787f694720a1";
-// #4037: the real served x-fe-version token has a 20-hex tail (e.g.
-// `serp_20250401_100419_ET-19d438eb199b2bf7c300`); the previous `{40}` requirement
-// never matched the live token, so the scrape silently fell back to DEFAULT_FE_VERSION.
-// Bounded `{20,40}` keeps the pattern ReDoS-safe.
-export const FE_VERSION_PATTERN = /serp_\d{8}_\d{6}_[A-Z]{2}-[0-9a-f]{20,40}/;
+// Live-served x-fe-version matcher moved to ./duckduckgo-web/models.ts; re-exported
+// for existing importers.
+export { FE_VERSION_PATTERN };
 const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) " +
   "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";
@@ -60,6 +130,10 @@ const SEEDED_COOKIES: ReadonlyArray<readonly [string, string]> = [
   ["dcm", "3"],
   ["isRecentChatOn", "1"],
 ];
+
+// GET /duckchat/v1/models needs no VQD/challenge token; cache it briefly so combo
+// fan-out doesn't refetch per request and never counts toward chat rate limits.
+const MODEL_IDS_CACHE_TTL_MS = 10 * 60 * 1000;
 
 function shouldUseBrowserBacked(): boolean {
   const flag = process.env.WEB_COOKIE_USE_BROWSER;
@@ -182,15 +256,19 @@ function mergeHeadersCaseInsensitive(
   return merged;
 }
 
-function normalizeDuckDuckGoModel(model: string | undefined): string {
-  if (!model) return "gpt-4o-mini";
-  const clean = model.startsWith("duckduckgo-web/") ? model.slice("duckduckgo-web/".length) : model;
-  if (clean === "claude-3-5-haiku-20241022") return "claude-haiku-4-5";
-  if (clean === "llama-4-scout") return "meta-llama/Llama-4-Scout-17B-16E-Instruct";
-  if (clean === "mistral-small-2501") return "mistral-small-2603";
-  if (clean === "gpt-oss-120b") return "tinfoil/gpt-oss-120b";
-  return clean;
-}
+/**
+ * #8000: DuckDuckGo's free Duck.ai lineup churns. The static alias map now lives in
+ * ./duckduckgo-web/models.ts (wire ids re-captured live 2026-08-26 — gpt-5.4-nano
+ * retired, gpt-5.6-luna added); re-exported here for existing importers. Runtime
+ * validation against the token-free /duckchat/v1/models handles future churn
+ * without shipping a new catalog snapshot every time.
+ */
+export {
+  DUCKDUCKGO_DEFAULT_MODEL,
+  DUCKDUCKGO_MODEL_ALIASES,
+  extractFreeDuckDuckGoModelIds,
+  normalizeDuckDuckGoModel,
+};
 
 function getDuckDuckGoModelCapabilities(model: string): DuckDuckGoModelCapabilities {
   // `reasoningEffort` is REQUIRED on every duckchat/v1/chat request. Omitting it
@@ -302,6 +380,7 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
   private feVersion = DEFAULT_FE_VERSION;
   private pendingVqdHash1: string | null = null;
   private readonly cookieJar = new Map<string, string>();
+  private modelsCache: { ids: Set<string>; fetchedAt: number } | null = null;
 
   private buildRequestHeaders(extra: Record<string, string> = {}): Record<string, string> {
     const headers = { ...FAKE_HEADERS, ...extra };
@@ -377,7 +456,7 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
     transformedBody: unknown;
   }> {
     const { model, body, stream, signal, upstreamExtraHeaders } = input;
-    const upstreamModel = normalizeDuckDuckGoModel(model);
+    const requestedModel = normalizeDuckDuckGoModel(model);
     const bodyObj = (body || {}) as Record<string, unknown>;
     const rawMessages = Array.isArray((body as { messages?: unknown[] } | null)?.messages)
       ? ((body as { messages: unknown[] }).messages as Array<Record<string, unknown>>)
@@ -459,8 +538,32 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
         ? AbortSignal.any([signal, controller.signal])
         : controller.signal;
 
+      // Self-heal against catalog churn (#8000 recurred with gpt-5.4-nano): when the
+      // resolved id isn't in the live token-free /models list, reroute through the
+      // alias map / default instead of burning a doomed chat call (400/429 fodder).
+      let upstreamModel = requestedModel;
+      const liveModelIds = await this.getLiveModelIds(mergedSignal);
+      if (liveModelIds && !liveModelIds.has(upstreamModel)) {
+        const fallbackModel = pickDuckDuckGoModel(upstreamModel, liveModelIds);
+        if (fallbackModel !== upstreamModel) {
+          console.warn(
+            `[duckduckgo-web] model "${upstreamModel}" absent from the live duckchat catalog — routing as "${fallbackModel}"`
+          );
+          upstreamModel = fallbackModel;
+        }
+      }
+
+      // #ddgw defense-in-depth: duckchat/v1/chat accepts only user/assistant roles.
+      // Normalize after catalog resolution so the effective upstream model is used.
+      // This also shields the system tool prompt injected by prepareToolMessages.
+      const normalizedMessages = normalizeSystemRole(
+        messages,
+        "duckduckgo-web",
+        upstreamModel
+      ) as typeof messages;
+
       const sendChat = async (vqdHeaders: DuckDuckGoAuthHeaders): Promise<Response> => {
-        const payload = buildDuckDuckGoPayload(upstreamModel, messages);
+        const payload = buildDuckDuckGoPayload(upstreamModel, normalizedMessages);
         const response = await fetch(CHAT_URL, {
           method: "POST",
           headers: mergeHeadersCaseInsensitive(
@@ -506,6 +609,17 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
       let chatResponse = await sendChat(vqdHeaders);
 
       if (chatResponse.status === 418) {
+        // Check if this is ERR_BN_LIMIT (rate limit/ban) — cannot be solved by retrying with fresh VQD
+        const bodyText = await chatResponse.clone().text();
+        const parsedError = parseDuckDuckGoError(bodyText);
+        const errorType = parsedError ? String(parsedError.type) : "";
+        if (errorType === "ERR_BN_LIMIT") {
+          // ERR_BN_LIMIT means the IP/session is banned/rate-limited — retrying won't help
+          // Return the error immediately without burning another VQD acquisition
+          clearTimeout(timeout);
+          return await this.processResponse(chatResponse, isStreaming, hasTools, requestedTools);
+        }
+        // ERR_CHALLENGE: the challenge was unsolved or expired — try once with fresh VQD
         this.pendingVqdHash1 = null;
         const freshVqd = await this.acquireAuthHeaders(mergedSignal);
         if (freshVqd.vqd4 || freshVqd.vqdHash1) {
@@ -585,6 +699,28 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
     }
   }
 
+  private async getLiveModelIds(signal: AbortSignal): Promise<Set<string> | null> {
+    const now = Date.now();
+    if (this.modelsCache && now - this.modelsCache.fetchedAt < MODEL_IDS_CACHE_TTL_MS) {
+      return this.modelsCache.ids;
+    }
+    try {
+      const resp = await fetch(MODELS_URL, {
+        method: "GET",
+        headers: this.buildRequestHeaders({ Accept: "application/json" }),
+        signal,
+      });
+      if (!resp.ok) return null;
+      const ids = extractFreeDuckDuckGoModelIds(await resp.json());
+      if (ids.size === 0) return null;
+      this.modelsCache = { ids, fetchedAt: now };
+      return ids;
+    } catch (error) {
+      void error;
+      return null;
+    }
+  }
+
   private async acquireVqdHeaders(signal: AbortSignal): Promise<DuckDuckGoVqdHeaders> {
     try {
       if (signal.aborted) throw new DOMException("Aborted", "AbortError");
@@ -636,7 +772,31 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
         };
       } catch (error) {
         void error;
-        return headers;
+        // NEVER forward the raw unsolved x-vqd-hash-1: upstream answers it with
+        // 418 ERR_CHALLENGE and the wasted call still counts toward the IP rate
+        // limit (spurious 429s). Retry once with a fresh /status challenge, then
+        // fail cleanly — a null vqdHash1 makes execute() surface 503/429 without
+        // another doomed call. A standalone x-vqd-4 is still passed through for
+        // the legacy header path.
+        const retry = await this.acquireVqdHeaders(signal);
+        if (retry.vqdHash1) {
+          try {
+            return {
+              vqd4: retry.vqd4,
+              vqdHash1: await solveDuckDuckGoChallenge(retry.vqdHash1, FAKE_HEADERS["User-Agent"]),
+              status: retry.status,
+              retryAfter: retry.retryAfter,
+            };
+          } catch (retryError) {
+            void retryError;
+          }
+        }
+        return {
+          vqd4: retry.vqd4 ?? headers.vqd4,
+          vqdHash1: null,
+          status: retry.status ?? headers.status,
+          retryAfter: retry.retryAfter ?? headers.retryAfter,
+        };
       }
     }
     return headers;
@@ -748,33 +908,42 @@ export class DuckDuckGoWebExecutor extends BaseExecutor {
         });
       }
 
-      const transformStream = new TransformStream({
-        async transform(chunk, controller) {
-          const text = new TextDecoder().decode(chunk);
-          const lines = text.split("\n");
+      const decoder = new TextDecoder();
+      const encoder = new TextEncoder();
+      let pendingLine = "";
 
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            if (line === "[DONE]") {
-              controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-              continue;
-            }
+      const enqueueLine = (line: string, controller: TransformStreamDefaultController) => {
+        const normalizedLine = line.endsWith("\r") ? line.slice(0, -1) : line;
+        if (!normalizedLine.trim()) return;
+        if (normalizedLine === "[DONE]") {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          return;
+        }
 
-            const data = parseDuckDuckGoDataLine(line);
-            const content = extractDuckDuckGoContent(data);
-            if (content) {
-              const openaiFormat = {
-                choices: [
-                  {
-                    delta: { content },
-                    index: 0,
-                  },
-                ],
-              };
-              const encoded = new TextEncoder().encode(`data: ${JSON.stringify(openaiFormat)}\n\n`);
-              controller.enqueue(encoded);
-            }
-          }
+        const data = parseDuckDuckGoDataLine(normalizedLine);
+        const content = extractDuckDuckGoContent(data);
+        if (content) {
+          const openaiFormat = {
+            choices: [
+              {
+                delta: { content },
+                index: 0,
+              },
+            ],
+          };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiFormat)}\n\n`));
+        }
+      };
+
+      const transformStream = new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          const lines = `${pendingLine}${decoder.decode(chunk, { stream: true })}`.split("\n");
+          pendingLine = lines.pop() ?? "";
+          for (const line of lines) enqueueLine(line, controller);
+        },
+        flush(controller) {
+          pendingLine += decoder.decode();
+          if (pendingLine) enqueueLine(pendingLine, controller);
         },
       });
 

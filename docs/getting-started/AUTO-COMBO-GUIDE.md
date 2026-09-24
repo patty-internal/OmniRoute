@@ -81,7 +81,7 @@ curl http://localhost:20128/v1/chat/completions \
 When you send a request with `model: "auto"`, OmniRoute:
 
 1. **Looks at all your connected providers** — Every provider you've added (OpenAI, Anthropic, Google, etc.)
-2. **Scores each one** on 5 factors:
+2. **Scores each one**, weighing among other things:
    - Is it working? (health)
    - Does it have capacity? (quota)
    - How much does it cost? (price)
@@ -214,7 +214,7 @@ Round-robin cycles through providers in order. Auto-combo **scores each provider
 
 For developers and contributors, see the [Auto-Combo Technical Reference](../routing/AUTO-COMBO.md) for:
 
-- Full 13-factor scoring algorithm
+- Full 16-factor scoring algorithm
 - Mode pack weight tables
 - Implementation file paths
 - API endpoints

@@ -109,7 +109,13 @@ test("waiting for admission times out into a retryable 503", async () => {
 test("byte-heavy admission waits for capacity when queueMs is set", async () => {
   const controller = new ChatAdmissionController(1);
   const body = JSON.stringify({ messages: [{ role: "user", content: "x".repeat(40) }] });
-  const options = { controller, largeBodyBytes: 32, hardMaxBytes: 1024, queueMs: 500 };
+  const options = {
+    controller,
+    largeBodyBytes: 32,
+    hardMaxBytes: 1024,
+    queueMs: 500,
+    heapPressureCheck: () => true,
+  };
 
   const first = await admitChatRequest(chatRequest(body), options);
   assert.equal(first.admit, true);
@@ -345,7 +351,13 @@ test("byte-heavy admission enforces the queued-bytes cap end-to-end", async () =
   assert.ok(held);
 
   const body = JSON.stringify({ messages: [{ role: "user", content: "x".repeat(40) }] });
-  const options = { controller, largeBodyBytes: 32, hardMaxBytes: 1024, queueMs: 2_000 };
+  const options = {
+    controller,
+    largeBodyBytes: 32,
+    hardMaxBytes: 1024,
+    queueMs: 2_000,
+    heapPressureCheck: () => true,
+  };
 
   // First request parks: declared length (~70B) fits the budget.
   const first = admitChatRequest(chatRequest(body), options);
@@ -456,6 +468,7 @@ test("aborting the request signal cancels a queued byte-heavy wait", async () =>
     largeBodyBytes: 32,
     hardMaxBytes: 1024,
     queueMs: 2_000,
+    heapPressureCheck: () => true,
   });
 
   let settled = false;

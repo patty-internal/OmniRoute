@@ -204,7 +204,13 @@ describe("llmlingua engine", () => {
 
     assert.equal(outMessages[1].content, assistant);
     assert.equal(outMessages[2].content, latestUser);
-    assert.ok(backendCalls.includes(oldUser), "older user context remains eligible");
+    // Upstream span semantics: eligible prose is split around protected spans
+    // (tags, negations) before the backend call, so the backend receives the
+    // prose PARTS of the older user message, not the whole string.
+    assert.ok(
+      backendCalls.some((call) => call.length > 10 && oldUser.includes(call)),
+      "older user context remains eligible"
+    );
     assert.ok(!backendCalls.includes(assistant), "assistant history must not be rewritten");
     assert.ok(!backendCalls.includes(latestUser), "latest user instruction must not be rewritten");
   });

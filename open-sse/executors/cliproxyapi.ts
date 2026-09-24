@@ -23,6 +23,7 @@ import {
 } from "./base.ts";
 import { HTTP_STATUS, FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import { getProviderPluginManifestHeader } from "../config/providerPluginManifestUrl.ts";
+import { rememberCpaAuthIndex } from "../handlers/chatCore/cpaTraceAuthIndex.ts";
 import { cloakThirdPartyToolNames } from "../services/claudeCodeToolRemapper.ts";
 import { sanitizeClaudeToolSchemas } from "../translator/helpers/schemaCoercion.ts";
 
@@ -428,6 +429,9 @@ export class CliproxyapiExecutor extends BaseExecutor {
       body: wireBody,
       signal: combinedSignal,
     });
+    // #11725: capture X-CPA-TRACE-ID before any later header rebuild. A missing
+    // or unknown shape stays unattributed and does not fail the request.
+    rememberCpaAuthIndex(response);
 
     if (response.status === HTTP_STATUS.RATE_LIMITED) {
       input.log?.warn?.("CPA", `CLIProxyAPI rate limited: ${response.status}`);

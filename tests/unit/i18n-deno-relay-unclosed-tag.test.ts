@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import i18nConfig from "../../config/i18n.json" with { type: "json" };
 
 const MESSAGES_DIR = path.resolve("src/i18n/messages");
 const KEY = "denoRelayOrgDomainHint";
@@ -29,7 +30,7 @@ const ENTITY_ORG_SLUG = "&lt;org-slug&gt;";
 
 describe("i18n — denoRelayOrgDomainHint UNCLOSED_TAG regression", () => {
   const localeFiles = fs.readdirSync(MESSAGES_DIR).filter((f) => f.endsWith(".json"));
-  const expectedCount = 43;
+  const expectedCount = i18nConfig.locales.length;
 
   // --- Test 1: JSON validity (no BOM, no parse errors) ---
   it(`all ${expectedCount} locale JSON files are valid (no BOM, no parse errors)`, () => {

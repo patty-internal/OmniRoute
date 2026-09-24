@@ -1,7 +1,7 @@
 ---
 title: "Management Authentication"
 version: 3.8.50
-lastUpdated: 2026-08-20
+lastUpdated: 2026-09-22
 ---
 
 # Management Authentication
@@ -33,7 +33,10 @@ Related: [Remote Mode](./REMOTE-MODE.md) (how `oma_live_…` is minted for a rem
 
 ## Scope matrices
 
-These two scope vocabularies are **different**. Do not mix them.
+API-key management scopes and access-token scopes are different vocabularies.
+MCP tool scopes are a third vocabulary, checked with `scopeMatches` rather than
+either function in the tables below. Side-by-side:
+[Three scope namespaces](../frameworks/MCP-SERVER.md#three-scope-namespaces).
 
 ### Access Token scopes (`oma_live_…`)
 

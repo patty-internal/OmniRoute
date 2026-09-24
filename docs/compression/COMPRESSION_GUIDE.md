@@ -182,22 +182,6 @@ With Stacked:        10K-2.5K tokens sent     (78-95% eligible RTK+Caveman range
 
 ---
 
-## Output Styles
-
-Output styles inject a system prompt instruction to steer the model's writing style. They are defined in the output style catalog and support multiple languages and intensity levels (`lite`, `full`, `ultra`).
-
-| Style         | Description                                                                                  | Supported Languages             | Levels                  |
-| ------------- | -------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------- |
-| `terse-prose` | Drop filler/articles/hedging; keep technical substance exact.                                | `en`, `pt-BR`, `ja`, `id`, `vi` | `lite`, `full`, `ultra` |
-| `less-code`   | YAGNI ladder: smallest working change, no unrequested abstractions.                          | `en`, `pt-BR`, `vi`, `ja`, `id` | `lite`, `full`, `ultra` |
-| `ponytail`    | Lazy senior-dev discipline: climb the YAGNI ladder, fix root cause, smallest working diff.   | `en`, `pt-BR`, `vi`, `ja`, `id` | `lite`, `full`, `ultra` |
-| `i-have-adhd` | Action-first output: next action leads, steps numbered, one concrete next step, no preamble. | `en`, `pt-BR`, `vi`, `ja`, `id` | `lite`, `full`, `ultra` |
-| `terse-cjk`   | Classical-Chinese ultra-terse style (locale-gated to zh).                                    | `zh`                            | `lite`, `full`, `ultra` |
-
-Each level appends a shared boundary clause ensuring that code blocks, URLs, file paths, commands, and identifiers remain verbatim.
-
----
-
 ## Configuration
 
 ### Dashboard
@@ -242,12 +226,17 @@ auto-trigger, and the panel Default. Unknown values are ignored (the request is 
 the global master switch still gates everything: when compression is off globally, the header cannot
 turn it on. Values:
 
-| Value         | Effect                                                               |
-| ------------- | -------------------------------------------------------------------- |
-| `off`         | No compression for this request.                                     |
-| `default`     | The panel-derived Default profile (ignores the active profile).      |
-| `engine:<id>` | A single engine when enabled, e.g. `engine:rtk`.                     |
-| `<combo>`     | A named combo, matched by name (case-insensitive) first, then by id. |
+| Value         | Effect                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| `off`         | No compression for this request.                                                                 |
+| `default`     | The panel-derived Default profile (ignores the active profile). Lossy engines are left off.      |
+| `safe`        | Same as omitting the header: dedup and whitespace folding only.                                  |
+| `allow-lossy` | Keep this request's operator plan, including summaries, relevance filters, and style rewrites.   |
+| `engine:<id>` | A single engine when enabled, e.g. `engine:rtk`. This is the per-request opt-in for that engine. |
+| `<combo>`     | A named combo, matched by name (case-insensitive) first, then by id.                             |
+
+Without `allow-lossy`, `engine:<id>`, or a named combo, lossy engines are not applied. The
+request still gets session dedup and whitespace folding when compression is on.
 
 The applied plan is echoed back in the `X-OmniRoute-Compression: <mode>; source=<source>` response
 header, where `<source>` is one of `request-header`, `routing-override`, `active-profile`,
@@ -319,13 +308,13 @@ Every compressed request includes stats in the server logs:
 
 ## Phase Roadmap
 
-| Phase    | Modes                                                                                                        | Status                                                                 |
-| -------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| Phase 1  | Off, Lite                                                                                                    | ✅ Shipped                                                             |
-| Phase 2  | Standard, Aggressive, Ultra                                                                                  | ✅ Shipped                                                             |
-| Phase 3  | RTK, Stacked, Compression Combos                                                                             | ✅ Shipped                                                             |
-| Phase 4  | Output Styles, SLM-tier Ultra, eval harness                                                                  | ✅ Shipped                                                             |
-| Phase 4C | Adaptive context-budget ("dial") — compute engine + API (`contextBudget` on `PUT /api/settings/compression`) | ✅ Shipped (API-configurable; dashboard controls not yet built, #7005) |
+| Phase    | Modes                                                                                                                                         | Status     |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Phase 1  | Off, Lite                                                                                                                                     | ✅ Shipped |
+| Phase 2  | Standard, Aggressive, Ultra                                                                                                                   | ✅ Shipped |
+| Phase 3  | RTK, Stacked, Compression Combos                                                                                                              | ✅ Shipped |
+| Phase 4  | Output Styles, SLM-tier Ultra, eval harness                                                                                                   | ✅ Shipped |
+| Phase 4C | Adaptive context-budget ("dial") — compute engine + API (`contextBudget` on `PUT /api/settings/compression`) + dashboard mode/policy controls | ✅ Shipped |
 
 ---
 
@@ -470,13 +459,13 @@ into a catalog of composable output styles: `OUTPUT_STYLE_CATALOG` in
 instruction that makes the model itself produce cheaper output; styles can be enabled
 together and are injected in catalog order.
 
-| Style                      | `id`          | What it does                                                                                                                                                                                                 | Instruction languages                                                               |
-| -------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Terse prose                | `terse-prose` | Drop filler/articles/hedging; keep technical substance exact. Same text as the legacy caveman output mode (referenced, not re-typed).                                                                        | en, pt-BR, ja, id                                                                   |
-| Less code                  | `less-code`   | YAGNI ladder: smallest working change, no unrequested abstractions.                                                                                                                                          | en only (backlog: [#10426](https://github.com/diegosouzapw/OmniRoute/issues/10426)) |
-| Ponytail (lazy senior dev) | `ponytail`    | "The best code is the code never written": reuse > rewrite, root cause > symptom, shortest working diff.                                                                                                     | en, pt-BR, vi, ja, id                                                               |
-| I have ADHD (action-first) | `i-have-adhd` | Action first (command/path/snippet before prose), numbered bounded steps, ONE concrete next step, no preamble/recap/closers. Adapted from [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT). | en, pt-BR, vi, ja, id                                                               |
-| Terse CJK (文言)           | `terse-cjk`   | Classical-Chinese ultra-terse style.                                                                                                                                                                         | zh (locale-gated: only offered when the detected language is `zh`)                  |
+| Style                      | `id`          | What it does                                                                                                                                                                                                 | Instruction languages                                              |
+| -------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Terse prose                | `terse-prose` | Drop filler/articles/hedging; keep technical substance exact. Same text as the legacy caveman output mode (referenced, not re-typed).                                                                        | en, pt-BR, es, de, fr, it, ru, zh, ja, id, vi                      |
+| Less code                  | `less-code`   | YAGNI ladder: smallest working change, no unrequested abstractions.                                                                                                                                          | en, pt-BR, es, de, fr, it, ru, zh, ja, id, vi                      |
+| Ponytail (lazy senior dev) | `ponytail`    | "The best code is the code never written": reuse > rewrite, root cause > symptom, shortest working diff.                                                                                                     | en, pt-BR, es, de, fr, it, ru, zh, ja, id, vi                      |
+| I have ADHD (action-first) | `i-have-adhd` | Action first (command/path/snippet before prose), numbered bounded steps, ONE concrete next step, no preamble/recap/closers. Adapted from [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT). | en, pt-BR, es, de, fr, it, ru, zh, ja, id, vi                      |
+| Terse CJK (文言)           | `terse-cjk`   | Classical-Chinese ultra-terse style.                                                                                                                                                                         | zh (locale-gated: only offered when the resolved language is `zh`) |
 
 Every style ships three intensity levels — `lite`, `full`, `ultra` — and every level
 ends with the shared boundaries clause, which keeps code blocks, file paths, commands,
@@ -508,7 +497,11 @@ the selection as:
 ```
 
 Back-compat: the legacy `outputMode: "caveman"` combo setting still works and maps to
-`terse-prose`, byte-identical to the old injection in all four legacy languages.
+`terse-prose`, byte-identical to the old injection in every legacy language.
+
+Language selection: with `languageConfig.enabled` on, `autoDetect` picks the
+language of the latest user message (same detector as the input engines);
+turning `autoDetect` off pins `defaultLanguage`. Off → English.
 
 The style × language matrix is pinned by
 `tests/unit/compression/output-styles-i18n-matrix.test.ts`: a new style cannot ship

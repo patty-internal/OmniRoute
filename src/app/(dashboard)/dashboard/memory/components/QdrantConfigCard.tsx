@@ -164,7 +164,9 @@ export default function QdrantConfigCard() {
   // connection button still drives the same check manually.
   useEffect(() => {
     if (!loading && qdrant.enabled && health === null) {
-      void checkHealth();
+      void (async () => {
+        await checkHealth();
+      })();
     }
   }, [loading, qdrant.enabled, health, checkHealth]);
 

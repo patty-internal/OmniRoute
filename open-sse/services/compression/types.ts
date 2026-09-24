@@ -180,7 +180,9 @@ export interface OmniglyphConfig {
 
 /** Lite detail settings for proactive request-time transformations. */
 export interface LiteConfig {
-  /** Truncate tool-result strings over 2,000 characters before provider dispatch. */
+  /** Truncate tool-result strings over this many characters before provider dispatch. */
+  maxToolLength?: number;
+  /** When false, skip proactive tool-result truncation. */
   compressToolResults: boolean;
 }
 
@@ -330,6 +332,8 @@ export interface CompressionStats {
   fallbackApplied?: boolean;
   /** Prompt tokens added by non-compression augmentation engines (e.g. ponytail); excluded from estimated savings. */
   augmentationTokens?: number;
+  /** #7847 observability: true when this result was served from the result memo cache. */
+  memoHit?: boolean;
   /**
    * Contabilidade física do OmniGlyph, normalizada pelo próprio pacote
    * (`normalizeAccounting`). Só número e enum — ver `omniglyphTelemetry.ts`

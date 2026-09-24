@@ -4,14 +4,15 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
-const {
+import {
   getTransientBuildPaths,
   movePath,
   pruneStandaloneArtifacts,
   resolveNextBuildEnv,
+  shouldBuildStandalone,
   syncStandaloneExtraModules,
   syncStandaloneNativeAssets,
-} = await import("../../scripts/build/build-next-isolated.mjs");
+} from "../../scripts/build/build-next-isolated.mjs";
 const { parseBooleanEnv, parsePositiveIntegerEnv } =
   await import("../../scripts/build/buildEnv.mjs");
 
@@ -21,7 +22,7 @@ async function withTempDir(fn) {
   try {
     await fn(tempDir);
   } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
+    await fs.rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
@@ -234,4 +235,19 @@ test("syncStandaloneExtraModules copies the complete wreq-js runtime", async () 
     );
     assert.match(logs[0] ?? "", /wreq-js TLS runtime/);
   });
+});
+
+test("shouldBuildStandalone honors OMNIROUTE_SKIP_STANDALONE and contributor profile", () => {
+  assert.equal(shouldBuildStandalone({}), true);
+  assert.equal(shouldBuildStandalone({ OMNIROUTE_SKIP_STANDALONE: "0" }), true);
+  assert.equal(shouldBuildStandalone({ OMNIROUTE_SKIP_STANDALONE: "1" }), false);
+  assert.equal(shouldBuildStandalone({ OMNIROUTE_BUILD_PROFILE: "contributor" }), false);
+  assert.equal(
+    shouldBuildStandalone({
+      OMNIROUTE_SKIP_STANDALONE: "1",
+      OMNIROUTE_BUILD_PROFILE: "minimal",
+    }),
+    false
+  );
+  assert.equal(shouldBuildStandalone({ OMNIROUTE_BUILD_PROFILE: "minimal" }), true);
 });

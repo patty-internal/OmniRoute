@@ -42,7 +42,7 @@ async function withTempEnv(fn: (paths: { root: string; home: string }) => void |
     } catch {
       // ignore
     }
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

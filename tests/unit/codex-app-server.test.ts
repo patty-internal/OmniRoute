@@ -896,3 +896,165 @@ test("testCodexAppServerConnection: env token + remote psd URL reports unconfigu
     globalThis.fetch = originalFetch;
   }
 });
+
+// ── Suffix normalization & effort precedence (#14277) ───────────────────────
+
+test("CodexAppServerExecutor: turn/start receives baseModel and suffix-derived effort (#14277)", async () => {
+  const ctrl = makeFakeSocket();
+  const { fn } = fakeTransport(ctrl);
+  const executor = new CodexAppServerExecutor({ websocketFn: fn });
+
+  const originalSend = ctrl.socket.send;
+  ctrl.socket.send = (data: string) => {
+    originalSend(data);
+    const frame = JSON.parse(data) as Record<string, unknown>;
+    if (frame.id == null || !frame.method) return;
+    queueMicrotask(() => {
+      if (frame.method === "thread/start") {
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: { threadId: "thr_alias" } });
+      } else if (frame.method === "turn/start") {
+        ctrl.emit({ jsonrpc: "2.0", method: "turn/completed", params: { turn: {} } });
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+      } else {
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+      }
+    });
+  };
+
+  const res = await executor.execute(makeExecuteInput({ stream: false, model: "gpt-5.5-medium" }));
+  const response = "response" in res ? res.response : res;
+  await response.text();
+
+  const turnStart = ctrl.sent.find((f) => f.method === "turn/start");
+  assert.ok(turnStart, "turn/start must be sent");
+  const params = turnStart!.params as Record<string, unknown>;
+  assert.equal(params.model, "gpt-5.5", "model alias suffix must be stripped for turn/start");
+  assert.equal(params.effort, "medium", "reasoning suffix must be forwarded as effort");
+});
+
+test("CodexAppServerExecutor: model suffix effort takes precedence over body effort (#14277)", async () => {
+  const ctrl = makeFakeSocket();
+  const { fn } = fakeTransport(ctrl);
+  const executor = new CodexAppServerExecutor({ websocketFn: fn });
+
+  const originalSend = ctrl.socket.send;
+  ctrl.socket.send = (data: string) => {
+    originalSend(data);
+    const frame = JSON.parse(data) as Record<string, unknown>;
+    if (frame.id == null || !frame.method) return;
+    queueMicrotask(() => {
+      if (frame.method === "thread/start") {
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: { threadId: "thr_alias" } });
+      } else if (frame.method === "turn/start") {
+        ctrl.emit({ jsonrpc: "2.0", method: "turn/completed", params: { turn: {} } });
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+      } else {
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+      }
+    });
+  };
+
+  // Suffix is high, body specifies low -> suffix wins
+  const res = await executor.execute(
+    makeExecuteInput({
+      stream: false,
+      model: "gpt-5.5-high",
+      body: { input: "test", reasoning: { effort: "low" } },
+    })
+  );
+  const response = "response" in res ? res.response : res;
+  await response.text();
+
+  const turnStart = ctrl.sent.find((f) => f.method === "turn/start");
+  assert.ok(turnStart);
+  const params = turnStart!.params as Record<string, unknown>;
+  assert.equal(params.model, "gpt-5.5");
+  assert.equal(params.effort, "high", "explicit model suffix overrides body reasoning effort");
+});
+
+test("CodexAppServerExecutor: body effort is forwarded when model has no reasoning suffix (#14277)", async () => {
+  const ctrl = makeFakeSocket();
+  const { fn } = fakeTransport(ctrl);
+  const executor = new CodexAppServerExecutor({ websocketFn: fn });
+
+  const originalSend = ctrl.socket.send;
+  ctrl.socket.send = (data: string) => {
+    originalSend(data);
+    const frame = JSON.parse(data) as Record<string, unknown>;
+    if (frame.id == null || !frame.method) return;
+    queueMicrotask(() => {
+      if (frame.method === "thread/start") {
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: { threadId: "thr_alias" } });
+      } else if (frame.method === "turn/start") {
+        ctrl.emit({ jsonrpc: "2.0", method: "turn/completed", params: { turn: {} } });
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+      } else {
+        ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+      }
+    });
+  };
+
+  const res = await executor.execute(
+    makeExecuteInput({
+      stream: false,
+      model: "gpt-5.5",
+      body: { input: "test", reasoning_effort: "low" },
+    })
+  );
+  const response = "response" in res ? res.response : res;
+  await response.text();
+
+  const turnStart = ctrl.sent.find((f) => f.method === "turn/start");
+  assert.ok(turnStart);
+  const params = turnStart!.params as Record<string, unknown>;
+  assert.equal(params.model, "gpt-5.5");
+  assert.equal(params.effort, "low", "body reasoning_effort is forwarded when model is unsuffixed");
+});
+
+test("CodexAppServerExecutor: registry loader injects codex websocket transport (#14277)", async () => {
+  const { getExecutor } = await import("../../open-sse/executors/index.ts");
+  const { __setCodexWebSocketTransportForTesting } =
+    await import("../../open-sse/executors/codex.ts");
+
+  const ctrl = makeFakeSocket();
+  const { fn } = fakeTransport(ctrl);
+  __setCodexWebSocketTransportForTesting(fn);
+
+  try {
+    const executor = await getExecutor("codex-app-server");
+    assert.ok(executor instanceof CodexAppServerExecutor, "must resolve to CodexAppServerExecutor");
+
+    const originalSend = ctrl.socket.send;
+    ctrl.socket.send = (data: string) => {
+      originalSend(data);
+      const frame = JSON.parse(data) as Record<string, unknown>;
+      if (frame.id == null || !frame.method) return;
+      queueMicrotask(() => {
+        if (frame.method === "thread/start") {
+          ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: { threadId: "thr_reg" } });
+        } else if (frame.method === "turn/start") {
+          ctrl.emit({ jsonrpc: "2.0", method: "turn/completed", params: { turn: {} } });
+          ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+        } else {
+          ctrl.emit({ jsonrpc: "2.0", id: frame.id, result: {} });
+        }
+      });
+    };
+
+    const res = await executor.execute(
+      makeExecuteInput({ stream: false, model: "gpt-5.5-medium" })
+    );
+    const response = "response" in res ? res.response : res;
+    await response.text();
+
+    const turnStart = ctrl.sent.find((f) => f.method === "turn/start");
+    assert.ok(
+      turnStart,
+      "registry-created executor successfully dispatched over injected transport"
+    );
+    assert.equal((turnStart!.params as Record<string, unknown>).model, "gpt-5.5");
+    assert.equal((turnStart!.params as Record<string, unknown>).effort, "medium");
+  } finally {
+    __setCodexWebSocketTransportForTesting(undefined);
+  }
+});

@@ -19,8 +19,15 @@ export interface VertexAnthropicDiscoveryModel {
 
 export function parseVertexAnthropicModels(data: unknown): VertexAnthropicDiscoveryModel[] {
   if (!data || typeof data !== "object") return [];
-  const envelope = data as { models?: unknown[] };
-  const models = Array.isArray(envelope.models) ? envelope.models : [];
+  const record = data as { models?: unknown[]; publisherModels?: unknown[] };
+  // The Model Garden publisher-model list is served by the v1beta1 API, which
+  // returns `{ publisherModels: [...] }`. Accept both the v1beta1 envelope and
+  // the generic `{ models: [...] }` shape for robustness.
+  const models = Array.isArray(record.publisherModels)
+    ? record.publisherModels
+    : Array.isArray(record.models)
+      ? record.models
+      : [];
 
   return models
     .map((m: unknown) => {

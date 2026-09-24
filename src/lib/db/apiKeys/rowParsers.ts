@@ -9,6 +9,7 @@
  */
 
 import type { AccessSchedule, RateLimitRule } from "./types";
+import { ALL_COMBOS_ACCESS_RULE } from "@/shared/constants/comboAccess";
 export { parseModelAccessMode } from "./modelAccessMode";
 export type { ModelAccessMode } from "./modelAccessMode";
 
@@ -30,6 +31,9 @@ export function parseAllowedModels(value: unknown): string[] {
 }
 
 export function parseAllowedCombos(value: unknown): string[] {
+  // Migration 149 may already be recorded before an older writer creates a key.
+  // Preserve those legacy NULL rows as allow-all while keeping explicit [] deny-all.
+  if (value === null || value === undefined) return [ALL_COMBOS_ACCESS_RULE];
   return parseStringList(value);
 }
 
@@ -63,6 +67,20 @@ export function parseCompressionEnabled(value: unknown): boolean {
   // DEFAULT 1 — preserve compression for legacy rows unless explicitly disabled.
   if (value === 0 || value === "0" || value === false) return false;
   return true;
+}
+
+export function parseAllowAutoCombos(value: unknown): boolean {
+  // DEFAULT 1 — a key predating this column keeps its auto/* access.
+  if (value === 0 || value === "0" || value === false) return false;
+  return true;
+}
+
+export type CatalogScope = "all" | "combos" | "models";
+
+export function parseCatalogScope(value: unknown): CatalogScope {
+  // DEFAULT 'all' — a key predating this column advertises everything, as before.
+  // An unrecognised value must widen to 'all' rather than silently hide rows.
+  return value === "combos" || value === "models" ? value : "all";
 }
 
 export function parseAccessSchedule(value: unknown): AccessSchedule | null {

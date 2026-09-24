@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy-vps.sh — deploy custom-features to Contabo VPS (jebo.ai)
+# deploy-vps.sh — deploy patty to Contabo VPS (jebo.ai)
 #
 # Usage: ./scripts/deploy-vps.sh
 #
@@ -42,9 +42,9 @@ cd /opt/OmniRoute || fail "cd /opt/OmniRoute"
 
 # Hard-reset to the remote so a dirty working tree (e.g. a locally-modified
 # package-lock.json from a prior npm run) can never abort the update.
-echo "[$(date)] [1/6] Fetching + hard-resetting to origin/custom-features..."
-git fetch origin custom-features || fail "git fetch"
-git reset --hard origin/custom-features || fail "git reset --hard"
+echo "[$(date)] [1/6] Fetching + hard-resetting to origin/patty..."
+git fetch origin patty || fail "git fetch"
+git reset --hard origin/patty || fail "git reset --hard"
 echo "[$(date)] Now at $(git rev-parse --short HEAD)"
 
 # Install deps BEFORE stopping the service (no downtime) so newly-added
