@@ -193,7 +193,7 @@ function ProviderQuotaSection({
         </div>
       </summary>
       <div className="px-3 pb-3">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3">
           {connections.map((conn) => (
             <QuotaCard
               key={conn.id}

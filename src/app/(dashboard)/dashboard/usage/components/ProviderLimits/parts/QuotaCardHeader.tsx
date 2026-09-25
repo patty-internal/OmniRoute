@@ -5,7 +5,7 @@ import Badge from "@/shared/components/Badge";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { pickDisplayValue } from "@/shared/utils/maskEmail";
 import { readCookieExpiresAt } from "@/shared/utils/webCookieExpiry";
-import { formatCountdown, type CardStatus } from "../utils";
+import { formatCountdown, type CardStatus, type SoonestResetInfo } from "../utils";
 import { translateUsageOrFallback } from "../i18nFallback";
 
 const STATUS_DOT_CLASS: Record<CardStatus, string> = {
@@ -19,6 +19,8 @@ interface Props {
   connection: any;
   providerLabel: string;
   cardStatus: CardStatus;
+  /** Soonest future quota reset across the card's rows (null when unknown). */
+  soonestReset: SoonestResetInfo | null;
   tierMeta: { key: string; label: string; variant: any };
   resolvedPlan: string | null;
   emailsVisible: boolean;
@@ -29,10 +31,17 @@ interface Props {
   togglingActive: boolean;
 }
 
+const RESET_URGENCY_CLASS: Record<string, string> = {
+  critical: "text-rose-500",
+  warning: "text-amber-500",
+  calm: "text-text-muted",
+};
+
 export default function QuotaCardHeader({
   connection,
   providerLabel,
   cardStatus,
+  soonestReset,
   tierMeta,
   resolvedPlan,
   emailsVisible,
@@ -127,7 +136,16 @@ export default function QuotaCardHeader({
           )}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-0.5 self-center">
+      <div className="flex shrink-0 items-center gap-1 self-center">
+        {soonestReset && (
+          <span
+            className={`inline-flex h-5 shrink-0 items-center gap-0.5 rounded-full border border-border px-1.5 text-[10px] font-semibold leading-none tabular-nums ${RESET_URGENCY_CLASS[soonestReset.urgency] ?? "text-text-muted"}`}
+            title={`${t("resetsIn")} ${soonestReset.countdown} — ${new Date(soonestReset.iso).toLocaleString()}`}
+          >
+            <span className="material-symbols-outlined text-[11px] leading-none">schedule</span>
+            {soonestReset.countdown}
+          </span>
+        )}
         <button
           type="button"
           disabled={togglingActive}

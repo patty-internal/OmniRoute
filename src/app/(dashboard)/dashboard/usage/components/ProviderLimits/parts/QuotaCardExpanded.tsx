@@ -16,6 +16,7 @@ import {
   getQuotaRemainingPercentage,
   getQuotaVisibilityKey,
   shouldShowQuotaUsageCount,
+  resetUrgency,
 } from "../utils";
 import QuotaMiniBar from "../QuotaMiniBar";
 import { translateUsageOrFallback, type UsageTranslationValues } from "../i18nFallback";
@@ -270,6 +271,20 @@ function QuotaDetailRow({
   const usedNum = Number(q.used || 0);
   const totalNum = Number(q.total || 0);
   const showUsage = shouldShowQuotaUsageCount(q);
+  // Countdown urgency + absolute-time tooltip: the reset date must be
+  // readable at a glance, not a stranded 10px gray string. Finite rows with
+  // no reset (idle windows) render an aligned em-dash so the right column
+  // keeps its rhythm across every row.
+  const resetMs = q.resetAt ? new Date(q.resetAt).getTime() : Number.NaN;
+  const resetTitle =
+    Number.isFinite(resetMs) ? new Date(resetMs).toLocaleString() : undefined;
+  const resetCls = Number.isFinite(resetMs)
+    ? resetUrgency(resetMs - Date.now()) === "critical"
+      ? "text-rose-500"
+      : resetUrgency(resetMs - Date.now()) === "warning"
+        ? "text-amber-500"
+        : "text-text-muted"
+    : "text-text-muted";
 
   return (
     <div className="flex flex-col gap-1 py-1" title={q.modelKey || q.name}>
@@ -310,8 +325,12 @@ function QuotaDetailRow({
         {q.staleAfterReset ? (
           <span title={t("refreshing")}>⟳</span>
         ) : cd ? (
-          <span>
-            ⏱ {t("resetsIn")} {cd}
+          <span className={`inline-flex items-center gap-0.5 font-medium ${resetCls}`} title={resetTitle}>
+            ⏱ {cd}
+          </span>
+        ) : !q.unlimited ? (
+          <span className="text-text-muted/60" title={t("noPlanFromProvider")}>
+            —
           </span>
         ) : null}
       </div>
