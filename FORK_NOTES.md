@@ -874,6 +874,12 @@ Follow-ups (not in this merge):
 
 ## Rebase procedure for future upstream releases
 
+> **2026-09-25:** the authoritative, current playbook now lives in
+> [`docs/ops/UPSTREAM_MERGE_GUIDE.md`](docs/ops/UPSTREAM_MERGE_GUIDE.md) with the trap
+> catalog in [`docs/ops/UPSTREAM_MERGE_GOTCHAS.md`](docs/ops/UPSTREAM_MERGE_GOTCHAS.md)
+> — both written from the v3.8.51 sync. The rebase-based procedure below is the
+> HISTORICAL v3.8.38-era flow; the fork merges (not rebases) since v3.8.51.
+
 When upstream releases a new version:
 
 ```bash
