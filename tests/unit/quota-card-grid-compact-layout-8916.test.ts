@@ -136,14 +136,14 @@ test("QuotaCardGrid exports a compact prop on its Props interface", () => {
   );
 });
 
-test("QuotaCardGrid compact mode renders an auto-fill minmax grid", () => {
-  const classNames = collectDivClassNames(COMPONENTS.quotaCardGrid);
-  const compactGrid = classNames.find((cn) =>
-    cn.includes("grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]")
-  );
-  assert.ok(
-    compactGrid,
-    "compact mode must render grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]"
+test("QuotaCardGrid compact mode renders the narrower MagicGrid card track", () => {
+  // 2026-09 redesign: the compact layout is the same unified MagicGrid board
+  // with a narrower per-card track (see quota-unified-magic-grid.test.ts).
+  const code = fs.readFileSync(COMPONENTS.quotaCardGrid, "utf8");
+  assert.match(
+    code,
+    /compact:\s*"w-full sm:w-\[\d+px\]"/,
+    "compact mode must keep a dedicated narrower card track in CARD_WIDTH_CLASS"
   );
 });
 
