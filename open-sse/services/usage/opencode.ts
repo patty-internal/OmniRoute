@@ -37,13 +37,22 @@ export async function getOpencodeUsage(connectionId: string, apiKey: string) {
 
     const { window5h, windowWeekly, windowMonthly, limitReached } = quota;
 
+    // An idle (0%-used) window has nothing to reset, but the upstream API
+    // reports its resetsAt as NOW+window — every account's card then showed
+    // the SAME, refresh-sliding "expiration" (observed live 2026-09-25: four
+    // keys fetched within 4s, all rolling resetsAt = fetch-time+5h). Null the
+    // reset on idle windows so the card renders "—"; windows with real usage
+    // keep upstream's authoritative resetAt.
+    const resetWhenUsed = (w: { percentUsed: number; resetAt: string | null }): string | null =>
+      w.percentUsed > 0 ? w.resetAt : null;
+
     const quotas: Record<string, UsageQuota> = {
       session: {
         used: window5h.percentUsed * 12,
         total: 12,
         remaining: (1 - window5h.percentUsed) * 12,
         remainingPercentage: (1 - window5h.percentUsed) * 100,
-        resetAt: window5h.resetAt,
+        resetAt: resetWhenUsed(window5h),
         unlimited: false,
         displayName: "$12 / 5-hour",
         currency: "USD",
@@ -53,7 +62,7 @@ export async function getOpencodeUsage(connectionId: string, apiKey: string) {
         total: 30,
         remaining: (1 - windowWeekly.percentUsed) * 30,
         remainingPercentage: (1 - windowWeekly.percentUsed) * 100,
-        resetAt: windowWeekly.resetAt,
+        resetAt: resetWhenUsed(windowWeekly),
         unlimited: false,
         displayName: "$30 / week",
         currency: "USD",
@@ -63,7 +72,7 @@ export async function getOpencodeUsage(connectionId: string, apiKey: string) {
         total: 60,
         remaining: (1 - windowMonthly.percentUsed) * 60,
         remainingPercentage: (1 - windowMonthly.percentUsed) * 100,
-        resetAt: windowMonthly.resetAt,
+        resetAt: resetWhenUsed(windowMonthly),
         unlimited: false,
         displayName: "$60 / month",
         currency: "USD",

@@ -156,6 +156,12 @@ function applyKimiMembershipRatios(quotas: Record<string, UsageQuota>, usages: u
     ["limit_5h", "code_5h", "Code · 5h"],
   ];
   for (const [source, key, displayName] of mapping) {
+    // Fill-only: the count-based windows (usage / limits[]) are authoritative.
+    // Live payload observed 2026-09-25 (api.kimi.com/coding/v1/usages, API-key
+    // session): usage.used = 66/100 while usages.limit_7d.used_ratio = 0 — the
+    // ratio block is stuck at zero and previously CLOBBERED the real usage,
+    // pinning the dashboard at "100% remaining" forever.
+    if (key in quotas) continue;
     const quota = createKimiRatioQuota(rec[source]);
     if (!quota) continue;
     quotas[key] = { ...quota, displayName };
