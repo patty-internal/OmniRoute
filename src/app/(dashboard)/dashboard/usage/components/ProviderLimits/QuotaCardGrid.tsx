@@ -97,7 +97,14 @@ export function sortProviderConnectionsByPriority(
     const statusDiff = STATUS_RANK[worstStatus(aQuotas)] - STATUS_RANK[worstStatus(bQuotas)];
     if (statusDiff !== 0) return statusDiff;
 
-    const resetDiff = getSoonestResetMs(aQuotas) - getSoonestResetMs(bQuotas);
+    // Minute granularity: idle opencode 5h windows report resetsAt = now+5h,
+    // so every card's reset differs only by seconds of fetch-order jitter —
+    // comparing at full ms resolution reordered cards on every refresh (read
+    // by operators as accounts "swapping usage"). A real sooner reset is
+    // still >= a minute apart.
+    const resetDiff =
+      Math.floor(getSoonestResetMs(aQuotas) / 60_000) -
+      Math.floor(getSoonestResetMs(bQuotas) / 60_000);
     if (resetDiff !== 0) return resetDiff;
 
     const remainingDiff =
