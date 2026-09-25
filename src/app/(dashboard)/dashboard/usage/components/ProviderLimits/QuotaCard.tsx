@@ -16,7 +16,9 @@ import {
   computeCanEditCutoff,
   computeCanRedeemResetCredit,
   hasQuotaCutoffOverrides,
+  getSoonestResetInfo,
   type CardStatus,
+  type SoonestResetInfo,
 } from "./utils";
 import QuotaCardHeader from "./parts/QuotaCardHeader";
 import QuotaCardExpanded from "./parts/QuotaCardExpanded";
@@ -92,6 +94,12 @@ export default function QuotaCard({
     [connection.provider, rawQuotas, quotaVisibility]
   );
   const cardStatus = useMemo<CardStatus>(() => worstStatus(quotas), [quotas]);
+  // Soonest future reset across the card's rows — surfaced as a header chip so
+  // expiration is scannable across a whole grid of cards without reading rows.
+  const soonestReset = useMemo<SoonestResetInfo | null>(
+    () => getSoonestResetInfo(quotas),
+    [quotas]
+  );
   const tierMeta = useMemo(
     () =>
       normalizePlanTier(
@@ -140,6 +148,7 @@ export default function QuotaCard({
         connection={connection}
         providerLabel={providerLabel}
         cardStatus={cardStatus}
+        soonestReset={soonestReset}
         tierMeta={tierMeta}
         resolvedPlan={resolvedPlan}
         emailsVisible={emailsVisible}

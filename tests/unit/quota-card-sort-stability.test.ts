@@ -31,7 +31,9 @@ test("sub-minute reset jitter must not reorder same-status cards", () => {
   // Both accounts idle (0 used): resets differ by 2 SECONDS only — the exact
   // production shape after a bulk refresh. Order must fall through to the
   // stable name comparison, not flip with the jitter.
-  const base = Date.now() + 5 * 3600_000;
+  // Anchor 10s into a minute so base and base+2s can never straddle the
+  // minute boundary the sort rounds to.
+  const base = Math.floor((Date.now() + 5 * 3600_000) / 60_000) * 60_000 + 10_000;
   const a = conn("aaa", "alpha");
   const b = conn("bbb", "beta");
   // alpha's jitter is LATER — the buggy sort would put beta first purely on

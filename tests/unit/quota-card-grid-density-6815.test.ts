@@ -120,7 +120,9 @@ function parseColumnRules(className: string): ColumnRule[] {
       continue;
     }
 
-    const autoFitMatch = rest.match(/^\[repeat\(auto-fit,\s*minmax\((.+),\s*1fr\)\)\]$/);
+    const autoFitMatch = rest.match(
+      /^\[repeat\((?:auto-fill|auto-fit),\s*minmax\((.+),\s*1fr\)\)\]$/
+    );
     if (autoFitMatch) {
       const trackPxMatches = [...autoFitMatch[1].matchAll(/(\d+)px/g)];
       if (trackPxMatches.length > 0) {

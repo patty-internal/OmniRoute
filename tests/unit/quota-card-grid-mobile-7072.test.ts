@@ -92,15 +92,25 @@ function assertSingleColumnMobileFallback(cardGridClassName: string): void {
     return;
   }
 
-  // Container-driven layout (#7027 style): an arbitrary-value auto-fit grid
-  // template computes column count from available width, not a breakpoint.
+  // Container-driven layout (#7027 style): an arbitrary-value auto-fill/auto-fit
+  // grid template computes column count from available width, not a breakpoint.
+  // auto-fill is the required shape since the 2026-09 consistency redesign:
+  // auto-fit collapses empty tracks, stretching a provider's lone card
+  // full-width while multi-account providers show narrow cards.
   const autoFitToken = tokens.find(
-    (t) => t.startsWith("grid-cols-[") && t.includes("auto-fit") && t.includes("minmax(")
+    (t) =>
+      t.startsWith("grid-cols-[") &&
+      (t.includes("auto-fill") || t.includes("auto-fit")) &&
+      t.includes("minmax(")
   );
   assert.ok(
     autoFitToken,
-    `expected either an unprefixed grid-cols-1 mobile fallback or a repeat(auto-fit, minmax(...)) ` +
+    `expected either an unprefixed grid-cols-1 mobile fallback or a repeat(auto-fill, minmax(...)) ` +
       `container grid, got className="${cardGridClassName}"`
+  );
+  assert.ok(
+    autoFitToken!.includes("auto-fill"),
+    "per-group card grid must use auto-fill (not auto-fit): auto-fit stretches a lone card full-width"
   );
 
   const minTrackMatch =

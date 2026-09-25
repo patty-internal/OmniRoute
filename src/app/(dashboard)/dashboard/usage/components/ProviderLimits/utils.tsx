@@ -493,7 +493,30 @@ export function formatCountdown(resetAt: string | null | undefined): string | nu
   }
 }
 
-export function getNextResetSummary(quotas: any[] | undefined): string | null {
+export type ResetUrgency = "critical" | "warning" | "calm";
+
+/**
+ * How soon until the soonest quota reset? Pure classification so the header
+ * chip and per-row countdowns share one threshold set: <1h critical (red),
+ * <6h warning (amber), otherwise calm (muted).
+ */
+export function resetUrgency(msUntilReset: number): ResetUrgency {
+  if (msUntilReset <= 3_600_000) return "critical";
+  if (msUntilReset <= 6 * 3_600_000) return "warning";
+  return "calm";
+}
+
+export interface SoonestResetInfo {
+  /** Absolute ISO time of the soonest future reset across the card's quotas. */
+  iso: string;
+  /** Relative countdown label, e.g. "2h 14m". */
+  countdown: string;
+  /** Urgency bucket for coloring. */
+  urgency: ResetUrgency;
+}
+
+/** Soonest future reset across a card's quota rows (past/absent resets ignored). */
+export function getSoonestResetInfo(quotas: any[] | undefined): SoonestResetInfo | null {
   if (!quotas || quotas.length === 0) return null;
   const now = Date.now();
   let soonest = Number.POSITIVE_INFINITY;
@@ -507,7 +530,16 @@ export function getNextResetSummary(quotas: any[] | undefined): string | null {
       soonestIso = typeof q.resetAt === "string" ? q.resetAt : new Date(ts).toISOString();
     }
   }
-  return soonestIso ? formatCountdown(soonestIso) : null;
+  if (!soonestIso) return null;
+  return {
+    iso: soonestIso,
+    countdown: formatCountdown(soonestIso) ?? "",
+    urgency: resetUrgency(soonest - now),
+  };
+}
+
+export function getNextResetSummary(quotas: any[] | undefined): string | null {
+  return getSoonestResetInfo(quotas)?.countdown ?? null;
 }
 
 function addQuotaModelIdVariants(out: Set<string>, provider: string, modelId: string) {
