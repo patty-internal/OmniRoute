@@ -26,6 +26,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { sortProviderConnectionsByPriority } from "../../src/app/(dashboard)/dashboard/usage/components/ProviderLimits/QuotaCardGrid";
 
 const COMPONENT_PATH = path.resolve(
   import.meta.dirname,
@@ -33,7 +34,12 @@ const COMPONENT_PATH = path.resolve(
 );
 
 function parseSource(sourcePath: string): ts.SourceFile {
-  return ts.createSourceFile(sourcePath, fs.readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true);
+  return ts.createSourceFile(
+    sourcePath,
+    fs.readFileSync(sourcePath, "utf8"),
+    ts.ScriptTarget.Latest,
+    true
+  );
 }
 
 function collectStringLiterals(node: ts.Node, out: string[] = []): string[] {
@@ -47,7 +53,6 @@ function collectStringLiterals(node: ts.Node, out: string[] = []): string[] {
 
 const source = parseSource(COMPONENT_PATH);
 const allLiterals = collectStringLiterals(source);
-
 
 test("unified board — no per-provider section markup survives in QuotaCardGrid", () => {
   assert.ok(
@@ -68,7 +73,11 @@ test("unified board — card width: full-width on phones, fixed >= 260px track f
     `expected the MagicGrid item wrapper to carry "w-full sm:w-[Npx]" (found none); got ${JSON.stringify(allLiterals)}`
   );
   for (const cls of widthLiterals) {
-    assert.match(cls, /\bw-full\b/, "base (mobile) width must be full — MagicGrid then computes 1 column");
+    assert.match(
+      cls,
+      /\bw-full\b/,
+      "base (mobile) width must be full — MagicGrid then computes 1 column"
+    );
     const match = cls.match(/sm:w-\[(\d+)px\]/);
     assert.ok(match, `expected a fixed sm: track width in "${cls}"`);
     assert.ok(
@@ -96,17 +105,39 @@ test("unified board — density: configured track + gutter yield >= 2 columns at
 test("unified board — MagicGrid wiring: static config, shortest-column-first, no listen()", () => {
   const code = fs.readFileSync(COMPONENT_PATH, "utf8");
   assert.match(code, /new MagicGrid\(/, "QuotaCardGrid must drive a MagicGrid instance");
-  assert.match(code, /static:\s*true/, "MagicGrid must be configured static (partial loads position immediately)");
-  assert.match(code, /useMin:\s*true/, "useMin (shortest-column-first) is the masonry behavior the board needs");
-  assert.match(code, /maxColumns:\s*\d+/, "maxColumns must be capped so ultrawide containers stay scannable");
+  assert.match(
+    code,
+    /static:\s*true/,
+    "MagicGrid must be configured static (partial loads position immediately)"
+  );
+  // useMin must be OFF: shortest-column-first packing scatters DOM-adjacent
+  // (same-provider) cards across the board. Round-robin columns keep the
+  // grouped DOM order reading row-major, left to right.
+  assert.match(
+    code,
+    /useMin:\s*false/,
+    "useMin packing must stay OFF — it scatters grouped provider cards"
+  );
+  assert.ok(
+    !/maxColumns:/.test(code),
+    "columns must stay uncapped so the board uses all available width on wide screens"
+  );
   assert.ok(
     !/\.listen\(\)/.test(code),
     "listen() must NOT be called — it registers an unremovable window resize listener (leak on unmount)"
   );
   // Reposition triggers must be ours and cleaned up.
-  assert.match(code, /new MutationObserver\(/, "card height changes (expander, loading→data) must reposition");
+  assert.match(
+    code,
+    /new MutationObserver\(/,
+    "card height changes (expander, loading→data) must reposition"
+  );
   assert.match(code, /new ResizeObserver\(/, "container resize must reposition");
-  assert.match(code, /mutation\.disconnect\(\)/, "MutationObserver must be disconnected on unmount");
+  assert.match(
+    code,
+    /mutation\.disconnect\(\)/,
+    "MutationObserver must be disconnected on unmount"
+  );
   assert.match(code, /resize\.disconnect\(\)/, "ResizeObserver must be disconnected on unmount");
 });
 
@@ -118,5 +149,57 @@ test("unified board — compact density keeps its own narrower track", () => {
   assert.ok(
     Number(compact![1]) < Number(full![1]),
     `compact track (${compact![1]}px) should be narrower than full (${full![1]}px)`
+  );
+});
+
+test("unified board — same-provider cards are adjacent in the sorted DOM order", () => {
+  const mk = (id: string, provider: string, name: string) => ({
+    id,
+    provider,
+    name,
+    isActive: true,
+  });
+  const quota = (remaining: number) => [
+    { name: "q", used: 100 - remaining, total: 100, remainingPercentage: remaining },
+  ];
+  // quotaData entries are shaped { quotas: [...] } — same as the component reads.
+  const data = {
+    oc1: { quotas: quota(90) },
+    oc2: { quotas: quota(10) },
+    cl1: { quotas: quota(50) },
+    oc3: { quotas: quota(70) },
+    z1: { quotas: quota(30) },
+  };
+  const conns = [
+    mk("oc1", "opencode-go", "a"),
+    mk("cl1", "claude", "b"),
+    mk("oc2", "opencode-go", "c"),
+    mk("z1", "zai", "d"),
+    mk("oc3", "opencode-go", "e"),
+  ];
+  const sorted = sortProviderConnectionsByPriority(conns, data);
+  const providers = sorted.map((c: { provider: string }) => c.provider);
+  // Re-entry = a provider block ENDS and the same provider starts again later.
+  const seen = new Set<string>();
+  let switches = 0;
+  let prev: string | null = null;
+  for (const p of providers) {
+    if (prev !== null && p !== prev && seen.has(p)) switches++;
+    seen.add(p);
+    prev = p;
+  }
+  assert.equal(
+    switches,
+    0,
+    `provider cards must be grouped adjacently (no re-entry), got order: ${providers.join(",")}`
+  );
+  // opencode-go's internal order still follows the priority sort (worst first).
+  const ocOrder = sorted
+    .filter((c: { provider: string }) => c.provider === "opencode-go")
+    .map((c: { id: string }) => c.id);
+  assert.deepEqual(
+    ocOrder,
+    ["oc2", "oc3", "oc1"],
+    "within a provider, priority sort still applies"
   );
 });
