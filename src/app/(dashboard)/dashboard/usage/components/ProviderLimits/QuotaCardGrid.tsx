@@ -20,7 +20,8 @@
 import { useEffect, useRef } from "react";
 import MagicGrid from "magic-grid";
 import QuotaCard from "./QuotaCard";
-import { worstStatus, type CardStatus } from "./utils";
+import { compareProviderGroups, worstStatus, type CardStatus } from "./utils";
+import { PROVIDER_ORDER } from "./constants";
 
 interface Props {
   connections: any[];
@@ -97,9 +98,18 @@ function getConnectionLabel(connection: any): string {
 
 export function sortProviderConnectionsByPriority(
   connections: any[],
-  quotaData: Record<string, any>
+  quotaData: Record<string, any>,
+  providerLabels: Record<string, string> = {}
 ) {
   return [...connections].sort((a, b) => {
+    // Providers grouped adjacently — same-provider cards must sit next to
+    // each other on the unified board ("All providers" view scannability).
+    const providerDiff = compareProviderGroups(a.provider, b.provider, {
+      providerOrder: PROVIDER_ORDER,
+      providerLabels,
+    });
+    if (providerDiff !== 0) return providerDiff;
+
     const aActive = a.isActive ?? true;
     const bActive = b.isActive ?? true;
     if (aActive !== bActive) return aActive ? -1 : 1;
@@ -117,11 +127,17 @@ export function sortProviderConnectionsByPriority(
     // so every card's reset differs only by seconds of fetch-order jitter —
     // comparing at full ms resolution reordered cards on every refresh (read
     // by operators as accounts "swapping usage"). A real sooner reset is
-    // still >= a minute apart.
-    const resetDiff =
-      Math.floor(getSoonestResetMs(aQuotas) / 60_000) -
-      Math.floor(getSoonestResetMs(bQuotas) / 60_000);
-    if (resetDiff !== 0) return resetDiff;
+    // still >= a minute apart. Cards with NO future reset (Infinity on both
+    // sides) must skip this tiebreak entirely: Infinity - Infinity is NaN,
+    // and a NaN comparator return short-circuits the remaining% comparison
+    // below with an engine-defined order (live bug: every idle opencode
+    // card has resetAt null since the idle-window fix).
+    const aReset = getSoonestResetMs(aQuotas);
+    const bReset = getSoonestResetMs(bQuotas);
+    if (Number.isFinite(aReset) && Number.isFinite(bReset)) {
+      const resetDiff = Math.floor(aReset / 60_000) - Math.floor(bReset / 60_000);
+      if (resetDiff !== 0) return resetDiff;
+    }
 
     const remainingDiff =
       getLowestRemainingPercentage(aQuotas) - getLowestRemainingPercentage(bQuotas);
@@ -160,7 +176,7 @@ export default function QuotaCardGrid({
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const sorted = sortProviderConnectionsByPriority(connections, quotaData);
+  const sorted = sortProviderConnectionsByPriority(connections, quotaData, providerLabels);
 
   // MagicGrid lifecycle: one instance per mount; `static: true` bypasses the
   // item-count gate so we can position partial loads, and we NEVER call
@@ -174,8 +190,11 @@ export default function QuotaCardGrid({
       container,
       static: true,
       gutter: 12,
-      maxColumns: 8,
-      useMin: true,
+      // Row-major placement (round-robin columns): with cards grouped by
+      // provider in DOM order, each row reads as consecutive provider blocks.
+      // useMin's shortest-column-first packing would scatter them.
+      useMin: false,
+      // No column cap — the board uses all available width on wide screens.
       animate: true,
     });
 
@@ -213,10 +232,7 @@ export default function QuotaCardGrid({
   return (
     <div ref={containerRef} className="relative">
       {sorted.map((conn) => (
-        <div
-          key={conn.id}
-          className={CARD_WIDTH_CLASS[compact ? "compact" : "full"]}
-        >
+        <div key={conn.id} className={CARD_WIDTH_CLASS[compact ? "compact" : "full"]}>
           <QuotaCard
             connection={conn}
             quota={quotaData[conn.id]}
