@@ -27,6 +27,7 @@ export function buildClientRawRequest(request: Request, body: unknown) {
     "api-key",
     "proxy-authorization",
     "x-patty-original-authorization",
+    "x-omniroute-admission-token",
   ]) {
     delete headers[credentialHeader];
   }

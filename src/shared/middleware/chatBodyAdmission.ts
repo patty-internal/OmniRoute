@@ -21,7 +21,9 @@ import { trackRequest } from "../../lib/gracefulShutdown";
 import { resolveIngestByteBudget, type IngestBudgetSource } from "./admissionBudget";
 import {
   ADMISSION_BYPASS_HEADER,
+  ADMISSION_BYPASS_TOKEN_HEADER,
   isInternalAdmissionBypass,
+  resolveAdmissionBypassToken,
   resolveSelfLoopBearer,
   resolveSessionId,
 } from "./chatAdmissionIdentity";
@@ -683,7 +685,13 @@ const defaultAdmissionController = new ChatAdmissionController(CHAT_MAX_HEAVY_IN
  * per-key capacity being allocated.
  */
 
-export { ADMISSION_BYPASS_HEADER, resolveSelfLoopBearer, resolveSessionId };
+export {
+  ADMISSION_BYPASS_HEADER,
+  ADMISSION_BYPASS_TOKEN_HEADER,
+  resolveAdmissionBypassToken,
+  resolveSelfLoopBearer,
+  resolveSessionId,
+};
 
 const NULL_LEASE: ChatAdmissionLease = {
   released: true,

@@ -5,6 +5,7 @@ const ADMISSION_BYPASS_VALUE = "internal";
 const FINGERPRINT_KEY = "omniroute-admission-fingerprint-v1";
 
 export const ADMISSION_BYPASS_HEADER = "x-omniroute-admission-bypass";
+export const ADMISSION_BYPASS_TOKEN_HEADER = "x-omniroute-admission-token";
 
 export function resolveSessionId(request: Request): string {
   const authHeader = request.headers.get("authorization") || "";
@@ -19,12 +20,10 @@ export function resolveSessionId(request: Request): string {
 }
 
 // Lazily generated, held in memory only for the lifetime of this process — never
-// persisted, never logged. Used ONLY as the last-resort self-loop bearer when the
-// operator hasn't set OMNIROUTE_API_KEY/ROUTER_API_KEY (#13679: the previous fallback
-// was the checked-in literal "sk_omniroute", a predictable shared secret anyone reading
-// the source could forge). Both the in-process caller (audioBridgeHelpers /
-// visionBridgeHelpers) and the verifier (isInternalAdmissionBypass) call this same
-// function, so they always agree on the value within one process.
+// persisted or logged. It proves internal admission bypass for callers that use
+// a separate API key, and remains the last-resort self-loop bearer when the
+// operator has not set OMNIROUTE_API_KEY/ROUTER_API_KEY. The in-process callers
+// and verifier agree on the value for this process's lifetime.
 let generatedSelfLoopSecret: string | null = null;
 
 function getGeneratedSelfLoopSecret(): string {
@@ -32,6 +31,11 @@ function getGeneratedSelfLoopSecret(): string {
     generatedSelfLoopSecret = randomBytes(32).toString("hex");
   }
   return generatedSelfLoopSecret;
+}
+
+/** Process-local proof for self-loops that authenticate with a separate, valid API key. */
+export function resolveAdmissionBypassToken(): string {
+  return getGeneratedSelfLoopSecret();
 }
 
 export function resolveSelfLoopBearer(): string {
@@ -46,6 +50,9 @@ export function isInternalAdmissionBypass(request: Request): boolean {
   const bypass =
     request.headers.get(ADMISSION_BYPASS_HEADER)?.trim().toLowerCase() === ADMISSION_BYPASS_VALUE;
   if (!bypass) return false;
+
+  const token = request.headers.get(ADMISSION_BYPASS_TOKEN_HEADER)?.trim();
+  if (token && timingSafeCompare(token, resolveAdmissionBypassToken())) return true;
 
   const auth = request.headers.get("authorization") || "";
   const match = /^bearer\s+(\S+)$/i.exec(auth.trim());

@@ -101,6 +101,7 @@ function maskSensitiveHeaders(headers: HeaderInput): Record<string, unknown> {
     "storagestate",
     "capability",
     "x-omniroute-lease-owner",
+    "x-omniroute-admission-token",
   ];
 
   for (const key of Object.keys(masked)) {
@@ -109,7 +110,7 @@ function maskSensitiveHeaders(headers: HeaderInput): Record<string, unknown> {
     if (lowerKey.startsWith("x-ratelimit-")) {
       continue;
     }
-    if (lowerKey === "x-omniroute-lease-owner") {
+    if (lowerKey === "x-omniroute-lease-owner" || lowerKey === "x-omniroute-admission-token") {
       masked[key] = "[REDACTED]";
       continue;
     }

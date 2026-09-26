@@ -1068,12 +1068,11 @@ async function handleChatInternal(
   // T09 — Pre-request Middleware Hooks
   // Execute user-defined hooks BEFORE task-aware routing and combo selection
   initPreRequestRegistry();
+  const hookHeaders = Object.fromEntries(request?.headers?.entries() || []);
+  delete hookHeaders["x-omniroute-admission-token"];
   const hookContext = createHookContext({
     body: body as Record<string, unknown>,
-    headers: Object.fromEntries(request?.headers?.entries() || []) as Record<
-      string,
-      string | string[] | undefined
-    >,
+    headers: hookHeaders as Record<string, string | string[] | undefined>,
     model: modelStr,
     combo: undefined,
     apiKeyInfo: apiKeyInfo ? { ...apiKeyInfo } : undefined,

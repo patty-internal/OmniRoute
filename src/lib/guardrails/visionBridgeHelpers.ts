@@ -5,7 +5,10 @@ import { detectMediaParts, type MediaPart } from "@omniroute/open-sse/utils/medi
 import { normalizeDataUri } from "@omniroute/open-sse/utils/imageNormalize";
 import { fetchRemoteImage } from "@/shared/network/remoteImageFetch";
 import { getRuntimePorts } from "@/lib/runtime/ports";
-import { resolveSelfLoopBearer } from "@/shared/middleware/chatBodyAdmission";
+import {
+  ADMISSION_BYPASS_TOKEN_HEADER,
+  resolveAdmissionBypassToken,
+} from "@/shared/middleware/chatBodyAdmission";
 import { getBestVisionModel, getFallbackModels, recordLatency } from "./visionBridgeRouter";
 import { REGISTRY } from "@omniroute/open-sse/config/providers";
 import { fetch as undiciFetch } from "undici";
@@ -371,6 +374,8 @@ export interface VisionModelConfig {
   prompt: string;
   timeoutMs: number;
   maxImages: number;
+  /** One request's shared model selection; avoids a catalog scan for every image. */
+  modelAttempts?: Promise<string[]>;
   /** Route catalog models through OmniRoute so provider connections remain authoritative. */
   routeThroughOmniRoute?: boolean;
   /** Optional parent deadline/abort propagated by multi-step media bridges. */
@@ -410,33 +415,17 @@ export async function callVisionModel(
     throw new Error("Vision model call aborted");
   }
 
-  // Auto-select the best vision model. `deps` is the router's existing
-  // injectable credential-check seam — without forwarding it, tests (and any
-  // embedder) cannot keep model selection away from the live connections DB.
-  const modelToUse = await getBestVisionModel(
-    {
-      fixedModel: config.model,
-      ...routerConfig,
-    },
-    deps
-  );
-  // (#8430) When no vision-capable provider has usable credentials on this
-  // instance, surface a clear error instead of attempting a describe call that
-  // would fail with an opaque auth/serde error upstream.
-  if (!modelToUse) {
+  const modelsToTry = await (config.modelAttempts ??
+    getVisionModelAttempts(config, routerConfig, deps));
+  if (modelsToTry.length === 0) {
     throw new Error("No vision-capable provider connected, cannot process image request");
   }
   let lastError: Error | null = null;
 
-  // Try primary model + fallbacks
-  const modelsToTry = [modelToUse, ...(await getFallbackModels(modelToUse, routerConfig, deps))];
-  const maxAttempts = Math.min(modelsToTry.length, routerConfig?.maxFallbackAttempts ?? 3);
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  for (const currentModel of modelsToTry) {
     if (config.signal?.aborted) {
       throw lastError ?? new Error("Vision model call aborted");
     }
-    const currentModel = modelsToTry[attempt];
     const attemptStart = Date.now();
     try {
       const result = await callVisionModelSingle(
@@ -461,8 +450,28 @@ export async function callVisionModel(
     }
   }
 
-  // All models failed
   throw lastError || new Error("All vision models failed");
+}
+
+/** Select the primary and fallback models once for all images in one request. */
+export async function getVisionModelAttempts(
+  config: VisionModelConfig,
+  routerConfig?: Partial<import("./visionBridgeRouter").VisionBridgeRouterConfig>,
+  deps?: import("./visionBridgeRouter").VisionBridgeRouterDeps
+): Promise<string[]> {
+  // `deps` is the router's injectable credential-check seam. Keep forwarding
+  // it so callers do not unexpectedly consult the live connections database.
+  const modelToUse = await getBestVisionModel(
+    {
+      fixedModel: config.model,
+      ...routerConfig,
+    },
+    deps
+  );
+  if (!modelToUse) return [];
+  const modelsToTry = [modelToUse, ...(await getFallbackModels(modelToUse, routerConfig, deps))];
+  const maxAttempts = Math.min(modelsToTry.length, routerConfig?.maxFallbackAttempts ?? 3);
+  return modelsToTry.slice(0, maxAttempts);
 }
 
 /**
@@ -799,22 +808,16 @@ async function callVisionModelSingle(
         headers["x-omniroute-disabled-guardrails"] = routeThroughOmniRoute
           ? "vision-bridge,video-bridge"
           : "vision-bridge";
-        // Internal self-loop sub-request: the parent request already holds the
-        // single heavyweight admission lease (`CHAT_MAX_HEAVY_IN_FLIGHT=1`), so a
-        // large base64-image describe body would be rejected with 503
-        // `chat_admission_busy` before it is described. The route only honors
-        // this header for trusted self-loop credentials (the local
-        // `sk_omniroute` sentinel OR the operator-configured env key), so
-        // external clients cannot use it to bypass admission.
+        // The parent holds the heavyweight lease. Authenticate this self-loop
+        // with the valid API key above, and prove admission-bypass authority
+        // separately with a process-local token. Replacing Authorization with
+        // the admission secret made REQUIRE_API_KEY instances reject every
+        // image description with AUTH_002.
         headers["x-omniroute-admission-bypass"] = "internal";
+        headers[ADMISSION_BYPASS_TOKEN_HEADER] = resolveAdmissionBypassToken();
         // The compression pipeline must not touch the image payload of the
         // self-loop describe call (stacked RTK/Caveman can mangle data URIs).
         headers["x-omniroute-compression"] = "off";
-        // The admission bypass honors the env key when set (REQUIRE_API_KEY=true
-        // deployments) and the `sk_omniroute` sentinel otherwise. Force the same
-        // resolved credential so the bypass holds even when a real vision key is
-        // configured for the vision model's provider.
-        headers["Authorization"] = `Bearer ${resolveSelfLoopBearer()}`;
       }
 
       response = await fetchImpl(`${baseUrl}/chat/completions`, {

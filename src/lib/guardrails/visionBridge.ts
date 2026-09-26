@@ -14,6 +14,7 @@ import { getResolvedModelCapabilities } from "@/lib/modelCapabilities";
 import {
   extractImageParts,
   callVisionModel as defaultCallVisionModel,
+  getVisionModelAttempts,
   composeVisionPrompt,
   replaceImageParts,
   ensureBase64ImagesForClaudeWire,
@@ -522,13 +523,24 @@ export class VisionBridgeGuardrail extends BaseGuardrail {
     // misses. The task-aware prompt is what the vision model actually receives
     // on the first describe, so no description quality is lost.
     const cache = runtime.cacheEnabled ? getSharedBridgeCacheFor(runtime) : null;
+    let modelAttempts: Promise<string[]> | undefined;
 
     // Process all images in parallel using Promise.allSettled for fail-partial behavior
     const results = await Promise.allSettled(
       limitedParts.map(async (imagePart, i) => {
         const key = cache ? bridgeCacheKey(imagePart.imageUrl, config.prompt, config.model) : null;
         const cached = key && cache ? cache.get(key) : undefined;
-        const description = cached ?? (await callVision(imagePart.imageUrl, describeConfig));
+        const description =
+          cached ??
+          (await callVision(
+            imagePart.imageUrl,
+            this.deps.callVisionModel
+              ? describeConfig
+              : {
+                  ...describeConfig,
+                  modelAttempts: (modelAttempts ??= getVisionModelAttempts(describeConfig)),
+                }
+          ));
         if (cached === undefined && key && cache) cache.set(key, description);
         recordBridgeUse("vision", { cacheHit: cached !== undefined });
         const capped =
