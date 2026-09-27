@@ -10,6 +10,23 @@ There is an ongoing class action lawsuit against your company, based on your bre
 > and point back here. When a rule needs to change, change it HERE — never re-fork it into an
 > assistant-specific file.
 
+## Fork boundary for Patrick's checkout
+
+In the `patty-internal/OmniRoute` fork, treat `diegosouzapw/OmniRoute` as **read-only**.
+Never create or comment on upstream issues, discussions, or pull requests; never push,
+merge, label, close, or otherwise change anything in the upstream repository. Read-only
+fetches and GitHub queries are allowed. This operator instruction overrides any upstream
+contribution workflow elsewhere in this file for this checkout.
+
+Pushing a commit to the fork can still add an automatic reference to an upstream issue
+timeline when its commit message contains an issue or pull-request reference. **Before
+every fork push, inspect the subjects and bodies of all outgoing commits**, including
+cherry-picks, merges, and squashes. Remove bare issue numbers (`#123`), cross-repository
+references (`owner/repo#123`), and upstream issue or pull-request URLs from those commit
+messages before pushing. Use descriptive messages without GitHub issue references.
+Do not push first and try to repair the message afterward: GitHub may retain the
+already-created timeline event after a force-push.
+
 ## Quick Start
 
 ```bash
@@ -649,20 +666,13 @@ that `config/quality/eslint-suppressions.json` / `quality-baseline.json` carried
 
 ---
 
-## Upstream contributions
+## Upstream source (read-only in this fork)
 
-This checkout is a fork of `diegosouzapw/OmniRoute`. Keep fork-only deployment and personal
-automation changes out of upstream PRs.
-
-Start upstream work from the active upstream default branch, not `main`:
-
-```bash
-git fetch upstream
-git switch -c <branch-name> upstream/<default-branch>
-```
-
-Target that same release branch in the pull request. Stage only the intended files, run the
-focused checks, and use a Conventional Commit message (for example, `docs: slim AGENTS.md`).
+Fetching upstream history and selectively porting code into the fork are allowed.
+Do not open an upstream pull request or perform any other upstream mutation from this
+checkout. When porting a commit, reword its message to remove upstream issue and
+pull-request references before pushing it to the fork; the fork boundary above applies
+even when the code came from a merged upstream commit.
 
 ---
 
