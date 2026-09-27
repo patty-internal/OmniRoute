@@ -87,6 +87,12 @@ cp -Rc "$(git -C /Volumes/nvme_2tb/projects/OmniRoute rev-parse --show-toplevel)
 git merge --no-ff <upstream-tip>
 ```
 
+Git has no per-commit "keep our patch" setting. `-X ours` only favors our side
+for conflicting hunks; upstream edits that merge cleanly still enter the tree.
+`-s ours` drops the upstream tree entirely. Path-level merge drivers also cannot
+express this feature-level invariant across `chatCore.ts`, config, persistence,
+and UI. Treat `FORK_NOTES.md` and the checklist below as the retention policy.
+
 ---
 
 ## 2. The conflict rulebook (R1–R7)
@@ -119,7 +125,12 @@ Checklist to re-verify at the end (all bit me or nearly did):
 - Pretendard / Patty branding (`src/app/login/PattyShell.tsx`, self-hosted font in
   globals.css, `public/sw.js` constants, `public/icon-*.png?v=patty-*`)
 - Compression: incremental cache, ponytail engine, KO language pack,
-  `autoTriggerPlan`'s enginesExplicit guard
+  `autoTriggerPlan`'s enginesExplicit guard; stable saturated-conversation
+  cache checkpoints and byte-stable `purify_history` notices; the independent
+  `reactiveContextCompactionEnabled` gate (SRC-014 in `FORK_NOTES.md`). Verify
+  both automatic `compressContext()` paths honor the flag while Session Dedup
+  and Ponytail can still run when the flag is false. The production DB value is
+  `false`; source defaults to `true` for existing installations.
 - `getRuntimePorts()` (no hardcoded port literals), `staleEncryptionGuard`
 - The `_tasks/` directory is a separate git repo — never track it in the main repo
 

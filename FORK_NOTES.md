@@ -16,39 +16,43 @@ Keep this file updated whenever we add a new fork-only source patch or a product
 | Item                                | Value                                                                          |
 | ----------------------------------- | ------------------------------------------------------------------------------ |
 | Upstream repo                       | `github.com/diegosouzapw/OmniRoute`                                            |
-| Fork remote                         | `git@github.com:patrickrho-patty/OmniRoute.git`                                |
+| Fork remote                         | `git@github.com:patty-internal/OmniRoute.git`                                  |
 | Fork branch carrying source patches | `patty` (successor of the retired `custom-features` branch)                    |
 | Upstream baseline                   | `release/v3.8.51` (`6b8c5df66f`) — merged 2026-09-24 (merge commit on `patty`) |
-| Current deploy HEAD                 | `3b5810bd4` (deployed to `jebo.ai` 2026-06-30)                                 |
+| Current deploy HEAD                 | `b3dbbbea54` (deployed to `omni.patty.io` 2026-09-27)                          |
 | Source divergence                   | merge with upstream v3.8.51 (+1,668 upstream commits since 2026-08-25 base)    |
 | Pushed to GitHub                    | Yes — `patty` pushed to origin                                                 |
-| VPS                                 | Contabo `109.123.231.227` (24 GB RAM, 8 CPU, 774 GB disk), port 12160          |
+| VPS                                 | `109.123.231.227`, OmniRoute container on port 20128                           |
 | Previous VPS                        | Oracle `161.33.162.164` (1 GB RAM), decommissioned                             |
 
-Fork source patch commits (most recent first) — these originally landed on the retired `custom-features` branch; its full history is contained in `patty`:
+Key fork source patch commits (most recent first). The older entries originated on
+the retired `custom-features` branch; its full history is contained in `patty`:
 
-| Commit      | Title                                                                                      | Docs        |
-| ----------- | ------------------------------------------------------------------------------------------ | ----------- |
-| `3b5810bd4` | feat(llmlingua): bundle tinybert ONNX model + load-from-repo-first logic                   | SRC-011     |
-| `011760580` | fix(branding): use patty.io's actual favicon image (not a vector approximation)            | DOC         |
-| `701433d7a` | fix(deploy): raise poller timeout to 25 min (build exceeds 10 min, caused false timeout)   | DOC         |
-| `4aece25e1` | feat(dashboard): add relevance engine page + fix favicon flicker                           | DOC         |
-| `c51b89128` | chore(branding): Patty rebrand login shell + anti-fingerprinting authz                     | DOC         |
-| `21d21c592` | fix(compression): overflow safeguard + rtk incremental stat accuracy                       | SRC-011     |
-| `27103d0b2` | fix(compression): address code-review findings on incremental + cache-safety               | SRC-011     |
-| `501548d5e` | feat(usage): surface provider prompt-cache hit rate per request                            | SRC-011     |
-| `17bb616cb` | feat(compression): preserve provider prompt cache — gate cache-unsafe engines              | SRC-011     |
-| `28f2dbe6e` | feat(compression): incremental process-once compressor (Stage 2, default-off)              | SRC-011     |
-| `6d598fc40` | feat(compression): merge upstream compression engines and add O(n) session-dedup (Stage 1) | SRC-012     |
-| `959667005` | Fix hardcoded ports + Claude Messages API shape recognition                                | SRC-001/002 |
-| `4bea2187b` | fix: add ChatGPT Web tool-call translation                                                 | SRC-003     |
-| `95a0bd35c` | feat(compression): add ponytail engine and per-engine analytics separation                 | SRC-004     |
-| `b166f0c97` | fix(sse): treat mid-stream client disconnect as disconnect, not a 502                      | SRC-005     |
-| `b3134b958` | feat(telemetry): honor OMNIROUTE_ENABLE_LIVE_WS=0 in the live-WS forwarder                 | SRC-006     |
-| `4d12f18aa` | feat(dashboard): add Ponytail submenu under Compression with run history                   | SRC-007     |
-| `43d670f77` | feat(compression): wire session-dedup config persistence                                   | SRC-008     |
-| `a55966c3b` | fix(compression): LLMLingua Worker path fix for Node 22                                    | SRC-009     |
-| `aeab40d15` | feat(compression): add Microsoft + Arcoldd LLMLingua ONNX models                           | SRC-010     |
+| Commit       | Title                                                                                      | Docs        |
+| ------------ | ------------------------------------------------------------------------------------------ | ----------- |
+| `b3dbbbea54` | feat(compression): separate automatic history compaction control                           | SRC-014     |
+| `a9890f0003` | fix(compression): keep saturated conversation cache prefix stable                          | SRC-014     |
+| `43f20dd484` | fix(compression): make purify_history drop-count notice byte-stable                        | SRC-014     |
+| `3b5810bd4`  | feat(llmlingua): bundle tinybert ONNX model + load-from-repo-first logic                   | SRC-011     |
+| `011760580`  | fix(branding): use patty.io's actual favicon image (not a vector approximation)            | DOC         |
+| `701433d7a`  | fix(deploy): raise poller timeout to 25 min (build exceeds 10 min, caused false timeout)   | DOC         |
+| `4aece25e1`  | feat(dashboard): add relevance engine page + fix favicon flicker                           | DOC         |
+| `c51b89128`  | chore(branding): Patty rebrand login shell + anti-fingerprinting authz                     | DOC         |
+| `21d21c592`  | fix(compression): overflow safeguard + rtk incremental stat accuracy                       | SRC-011     |
+| `27103d0b2`  | fix(compression): address code-review findings on incremental + cache-safety               | SRC-011     |
+| `501548d5e`  | feat(usage): surface provider prompt-cache hit rate per request                            | SRC-011     |
+| `17bb616cb`  | feat(compression): preserve provider prompt cache — gate cache-unsafe engines              | SRC-011     |
+| `28f2dbe6e`  | feat(compression): incremental process-once compressor (Stage 2, default-off)              | SRC-011     |
+| `6d598fc40`  | feat(compression): merge upstream compression engines and add O(n) session-dedup (Stage 1) | SRC-012     |
+| `959667005`  | Fix hardcoded ports + Claude Messages API shape recognition                                | SRC-001/002 |
+| `4bea2187b`  | fix: add ChatGPT Web tool-call translation                                                 | SRC-003     |
+| `95a0bd35c`  | feat(compression): add ponytail engine and per-engine analytics separation                 | SRC-004     |
+| `b166f0c97`  | fix(sse): treat mid-stream client disconnect as disconnect, not a 502                      | SRC-005     |
+| `b3134b958`  | feat(telemetry): honor OMNIROUTE_ENABLE_LIVE_WS=0 in the live-WS forwarder                 | SRC-006     |
+| `4d12f18aa`  | feat(dashboard): add Ponytail submenu under Compression with run history                   | SRC-007     |
+| `43d670f77`  | feat(compression): wire session-dedup config persistence                                   | SRC-008     |
+| `a55966c3b`  | fix(compression): LLMLingua Worker path fix for Node 22                                    | SRC-009     |
+| `aeab40d15`  | feat(compression): add Microsoft + Arcoldd LLMLingua ONNX models                           | SRC-010     |
 
 `main` in this fork is intentionally kept identical to upstream `main`; our deploy branch is `patty`. The older `custom-features` branch is retired — `patty` contains all of it and is the branch that receives upstream syncs and new fork patches.
 
@@ -531,6 +535,39 @@ Manual load test from bundled path: ~92 ms load (first call), warm inference ~5.
   `models/<family>/<hfRepo>/model.onnx` so `findBundledModelRoot()` finds them automatically.
 
 ---
+
+### SRC-014 — Preserve the provider cache on saturated conversations
+
+| Field             | Value                                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Commits           | `43f20dd484` (stable `purify_history` notice), `a9890f0003` (cache checkpoint), `b3dbbbea54` (independent switch) |
+| Upstream baseline | `release/v3.8.51`, merged into `patty` on 2026-09-24                                                              |
+| Production        | `omni.patty.io`, deployed `b3dbbbea54` on 2026-09-27                                                              |
+
+OmniRoute's `compressContext()` can replace the retained history when a request
+approaches the context threshold. Recomputing that boundary on each turn and
+putting a varying dropped-message count at the start of the request change the
+provider's cached prefix. The first two commits stabilize the notice and reuse
+the retained-history checkpoint across turns until the actual context budget is
+near exhaustion.
+
+The third commit adds `reactiveContextCompactionEnabled` to the compression
+configuration, persistence, validation, and dashboard. The gate in
+`open-sse/handlers/chatCore.ts` controls both proactive and last-resort
+`compressContext()` calls. It is independent of the global `enabled` switch and
+the selected prompt-compression engines. The source default is `true` for
+existing installations; production persists `false` in the `compression`
+namespace of `/opt/omniroute/data/storage.sqlite`. The global compression
+setting, Session Dedup, and Ponytail remain enabled in production.
+
+**Upstream sync invariant:** preserve these behaviors even if upstream moves the
+request pipeline or changes the compression implementation. Do not take either
+side's whole `chatCore.ts` or `contextManager.ts` merely to settle a conflict.
+After merging, confirm the flag still gates both automatic paths, the two
+selected engines can still run with the flag false, the notice is byte-stable,
+and the checkpoint does not move on every saturated turn. Before production
+cutover, confirm that the persistent flag is still `false`; a source merge alone
+does not change or verify the live database setting.
 
 ---
 

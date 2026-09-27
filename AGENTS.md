@@ -27,6 +27,23 @@ messages before pushing. Use descriptive messages without GitHub issue reference
 Do not push first and try to repair the message afterward: GitHub may retain the
 already-created timeline event after a force-push.
 
+### Preserve fork behavior during upstream syncs
+
+Before merging an upstream release into `patty`, read `FORK_NOTES.md` and
+`docs/ops/UPSTREAM_MERGE_GUIDE.md`, and audit every fork-only behavior listed there
+against the merged tree. A clean Git merge does not prove that a fork behavior
+survived an upstream refactor. Preserve the behavior in upstream's current code
+structure, then review the result before pushing or deploying. In particular,
+keep `reactiveContextCompactionEnabled` independent of the master compression
+switch: production turns off automatic history compaction while Session Dedup
+and Ponytail remain enabled (see `FORK_NOTES.md` SRC-014).
+
+Do not use `git merge -s ours` or blanket `-X ours`, `-X theirs`, or whole-file
+checkout to settle fork behavior. Those options can discard useful changes or
+silently lose a fork invariant. Resolve each relevant change using the merge
+guide's rules and the documented behavior; use a whole-file choice only after
+reviewing both versions and reapplying any needed changes.
+
 ## Quick Start
 
 ```bash
