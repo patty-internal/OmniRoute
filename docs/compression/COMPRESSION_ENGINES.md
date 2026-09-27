@@ -349,6 +349,15 @@ Compression exposes five MCP tools:
 
 ## Scope & exclusions
 
+**Automatic history compaction.** The built-in proactive and last-resort `compressContext()`
+passes can be controlled independently of the prompt-compression engines with
+`reactiveContextCompactionEnabled` (default `true`). The switch is on **Dashboard →
+OmniProxy → Compression Context → Compression Settings** and is also accepted by
+`PUT /api/settings/compression`. Setting it to `false` skips both automatic history-cutting
+passes while leaving selected engines such as Session Dedup and Ponytail enabled. The final
+context-window check still rejects requests that exceed the target model's limit. The global
+`enabled` switch continues to disable the entire compression pipeline.
+
 **Embeddings are never compressed.** `open-sse/handlers/embeddings.ts` never calls any
 compression engine — the request/response bodies pass straight to the executor untouched.
 This is structural today (embeddings and chat completions are disjoint handlers), not a

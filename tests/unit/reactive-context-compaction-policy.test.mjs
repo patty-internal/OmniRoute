@@ -10,7 +10,7 @@ const source = readFileSync(
 test("global compression off gates reactive and last-resort context compaction", () => {
   assert.match(
     source,
-    /reactiveContextCompactionEnabled\s*=\s*compressionSettingsResult\.enabled\s*&&\s*!compressionExcluded;/
+    /reactiveContextCompactionEnabled\s*=\s*compressionSettingsResult\.enabled\s*&&\s*!compressionExcluded\s*&&\s*compressionSettings\?\.reactiveContextCompactionEnabled\s*!==\s*false;/
   );
   // #8949 added the !nativeCodexPassthrough guard between the flag and the token check.
   assert.match(

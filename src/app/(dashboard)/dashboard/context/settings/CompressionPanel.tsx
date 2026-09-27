@@ -50,6 +50,7 @@ interface CavemanOutputModeConfig {
 
 interface CompressionConfig {
   enabled: boolean;
+  reactiveContextCompactionEnabled?: boolean;
   autoTriggerTokens: number;
   preserveSystemPrompt: boolean;
   preserveSystemPromptMode?: "always" | "whenNoCache" | "never";
@@ -82,6 +83,7 @@ const CAVEMAN_OUTPUT_LEVELS: CavemanIntensity[] = ["lite", "full", "ultra"];
 
 const DEFAULT_CONFIG: CompressionConfig = {
   enabled: false,
+  reactiveContextCompactionEnabled: true,
   autoTriggerTokens: 0,
   preserveSystemPrompt: true,
   engines: {},
@@ -437,6 +439,24 @@ export default function CompressionPanel() {
           />
         </div>
       </div>
+
+      <label className="mb-4 flex items-center justify-between gap-4 rounded-md border border-border/60 bg-bg-subtle px-3 py-3">
+        <span className="space-y-0.5">
+          <span className="block text-sm font-medium text-text-main">
+            {t("compressionReactiveContextTitle")}
+          </span>
+          <span className="block text-xs text-text-muted">
+            {t("compressionReactiveContextDesc")}
+          </span>
+        </span>
+        <Toggle
+          size="sm"
+          checked={config.reactiveContextCompactionEnabled !== false}
+          onChange={(enabled) => save({ reactiveContextCompactionEnabled: enabled })}
+          disabled={saving || !config.enabled}
+          ariaLabel={t("compressionReactiveContextTitle")}
+        />
+      </label>
 
       {/* Derived pipeline preview */}
       <div

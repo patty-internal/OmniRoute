@@ -709,6 +709,11 @@ export async function getCompressionSettings(): Promise<CompressionConfig> {
       case "enabled":
         config.enabled = parsed === true;
         break;
+      case "reactiveContextCompactionEnabled":
+        if (typeof parsed === "boolean") {
+          config.reactiveContextCompactionEnabled = parsed;
+        }
+        break;
       case "defaultMode":
         if (typeof parsed === "string" && COMPRESSION_MODES.has(parsed as CompressionMode)) {
           config.defaultMode = parsed as CompressionMode;

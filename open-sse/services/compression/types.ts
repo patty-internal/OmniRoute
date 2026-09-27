@@ -202,6 +202,8 @@ export type PreserveSystemPromptMode = "always" | "whenNoCache" | "never";
 
 export interface CompressionConfig {
   enabled: boolean;
+  /** Built-in proactive and last-resort history compaction; independent of prompt engines. */
+  reactiveContextCompactionEnabled?: boolean;
   defaultMode: CompressionMode;
   autoTriggerMode?: CompressionMode;
   autoTriggerTokens: number;
@@ -425,6 +427,7 @@ export const DEFAULT_CODEX_RESPONSES_CONFIG: CodexResponsesConfig = {
 
 export const DEFAULT_COMPRESSION_CONFIG: CompressionConfig = {
   enabled: false,
+  reactiveContextCompactionEnabled: true,
   defaultMode: "off",
   autoTriggerMode: "lite",
   autoTriggerTokens: 0,

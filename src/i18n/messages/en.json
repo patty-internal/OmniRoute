@@ -11307,6 +11307,8 @@
     "compressionPreserveSystemAlways": "Always",
     "compressionPreserveSystemNever": "Never",
     "compressionPreserveSystemWhenNoCache": "When no cache",
+    "compressionReactiveContextDesc": "At OmniRoute's context threshold, trim older messages, tool results, images, and thinking. Turn this off to leave history management to the client while keeping selected engines active. Oversized requests may be rejected.",
+    "compressionReactiveContextTitle": "Automatic history compaction",
     "compressionRoleAssistant": "Assistant",
     "compressionRoles": "Compress Message Roles",
     "compressionRoleSystem": "System",

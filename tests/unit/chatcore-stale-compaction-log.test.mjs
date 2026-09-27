@@ -23,7 +23,7 @@ test("gating expressions exist as documented (sanity check, tracks real source)"
   );
   assert.match(
     source,
-    /reactiveContextCompactionEnabled = compressionSettingsResult\.enabled && !compressionExcluded;/
+    /reactiveContextCompactionEnabled\s*=\s*compressionSettingsResult\.enabled\s*&&\s*!compressionExcluded\s*&&\s*compressionSettings\?\.reactiveContextCompactionEnabled\s*!==\s*false;/
   );
 });
 
@@ -31,10 +31,12 @@ test("on default install, reactiveContextCompactionEnabled is provably false whe
   const compressionSettingsResultEnabled = false; // DEFAULT_COMPRESSION_CONFIG.enabled
   const compressionExcluded = false;
   const apiKeyCompressionEnabled = true;
+  const configuredReactiveCompactionEnabled = true;
 
   const promptCompressionEnabled =
     compressionSettingsResultEnabled && !compressionExcluded && apiKeyCompressionEnabled;
-  const reactiveContextCompactionEnabled = compressionSettingsResultEnabled && !compressionExcluded;
+  const reactiveContextCompactionEnabled =
+    compressionSettingsResultEnabled && !compressionExcluded && configuredReactiveCompactionEnabled;
 
   const logFires = !promptCompressionEnabled;
 
@@ -47,9 +49,7 @@ test("on default install, reactiveContextCompactionEnabled is provably false whe
 });
 
 test("the log statement branches on reactiveContextCompactionEnabled so it stays accurate in both cases", () => {
-  const blockMatch = source.match(
-    /if \(!promptCompressionEnabled\) \{[\s\S]{0,400}\}/
-  );
+  const blockMatch = source.match(/if \(!promptCompressionEnabled\) \{[\s\S]{0,400}\}/);
   assert.ok(blockMatch, "expected to find the promptCompressionEnabled debug-log block");
   const block = blockMatch[0];
 

@@ -366,6 +366,7 @@ export const omniglyphConfigSchema = z
 export const compressionSettingsUpdateSchema = z
   .object({
     enabled: z.boolean().optional(),
+    reactiveContextCompactionEnabled: z.boolean().optional(),
     defaultMode: compressionModeSchema.optional(),
     autoTriggerMode: compressionModeSchema.optional(),
     autoTriggerTokens: z.number().int().min(0).optional(),

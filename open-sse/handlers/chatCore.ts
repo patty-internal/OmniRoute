@@ -1457,8 +1457,8 @@ export async function handleChatCore({
   let contextEditingEnabled = false;
 
   // The dashboard's global compression switch must also control the built-in
-  // reactive and last-resort compaction passes. Otherwise an operator selecting
-  // "off" still has large histories rewritten by trim_tools/purify_history.
+  // reactive and last-resort compaction passes. The separate reactive setting
+  // can disable those passes while leaving selected prompt engines active.
   let reactiveContextCompactionEnabled = false;
   // Hoisted to function scope (not just the compression-block scope below) so the
   // combo-resolved override survives to the final enforceOutputTokenBudget() call
@@ -1489,7 +1489,10 @@ export async function handleChatCore({
     const apiKeyCompressionEnabled = apiKeyInfo?.compressionEnabled !== false;
     let promptCompressionEnabled =
       compressionSettingsResult.enabled && !compressionExcluded && apiKeyCompressionEnabled;
-    reactiveContextCompactionEnabled = compressionSettingsResult.enabled && !compressionExcluded;
+    reactiveContextCompactionEnabled =
+      compressionSettingsResult.enabled &&
+      !compressionExcluded &&
+      compressionSettings?.reactiveContextCompactionEnabled !== false;
     contextEditingEnabled = compressionSettingsResult.contextEditingEnabled;
     if (!apiKeyCompressionEnabled) {
       log?.debug?.("COMPRESSION", "Prompt compression disabled for this API key");
