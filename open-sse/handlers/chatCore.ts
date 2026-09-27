@@ -2163,6 +2163,20 @@ export async function handleChatCore({
       1,
       Math.floor((Math.max(1, contextLimit) - reservedTokens) * COMPRESSION_THRESHOLD)
     );
+    // Reuse one retained-history boundary across turns until the actual context
+    // budget is near exhaustion. Reserve the requested output and a small margin;
+    // the proactive threshold still chooses each new checkpoint.
+    const outputReserve = Math.max(
+      16_384,
+      toPositiveInteger(body.max_completion_tokens ?? body.max_tokens) ?? 0
+    );
+    const cacheReuseMaxTokens = Math.floor(
+      contextLimit - reservedTokens - outputReserve - 1_024
+    );
+    const cacheSessionKey =
+      conversationId && cacheReuseMaxTokens > threshold
+        ? `${apiKeyInfo?.id ?? "anonymous"}:${provider}:${effectiveModel}:${conversationId}`
+        : undefined;
 
     log?.debug?.(
       "CONTEXT",
@@ -2192,6 +2206,8 @@ export async function handleChatCore({
         model: effectiveModel,
         maxTokens: threshold,
         reserveTokens: 0,
+        cacheSessionKey,
+        cacheReuseMaxTokens,
       });
 
       if (compressionResult.compressed) {

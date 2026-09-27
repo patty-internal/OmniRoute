@@ -5,6 +5,7 @@
  * 3 layers: trim tool messages, compress structured thinking, aggressive purification.
  */
 
+import { createHash } from "node:crypto";
 import { REGISTRY } from "../config/providerRegistry.ts";
 import {
   getModelContextLimit,
@@ -455,7 +456,8 @@ export type { ComboContextLimitSource } from "./comboContextLimit.ts";
  * is message-centric by design.
  *
  * @param {object} body - Request body with messages[]
- * @param {object} options - { provider?, model?, maxTokens?, reserveTokens?, keepLatestImages? }
+ * @param {object} options - { provider?, model?, maxTokens?, reserveTokens?, keepLatestImages?,
+ *   cacheSessionKey?, cacheReuseMaxTokens? }
  * @returns {{ body: object, compressed: boolean, stats: object }}
  */
 export function compressContext(
@@ -466,6 +468,8 @@ export function compressContext(
     maxTokens?: number;
     reserveTokens?: number;
     keepLatestImages?: number;
+    cacheSessionKey?: string;
+    cacheReuseMaxTokens?: number;
   } = {}
 ) {
   if (!body || !body.messages || !Array.isArray(body.messages)) {
@@ -540,7 +544,12 @@ export function compressContext(
   }
 
   // Layer 3: Aggressive purification — drop oldest messages keeping system + last N pairs
-  messages = purifyHistory(messages, targetTokens);
+  messages = purifyHistory(
+    messages,
+    targetTokens,
+    options.cacheSessionKey,
+    options.cacheReuseMaxTokens
+  );
   currentTokens = estimateTokens(messages); // #8594: object-path keeps the #8368 image estimate
   stats.layers.push({ name: "purify_history", tokens: currentTokens });
 
@@ -612,35 +621,97 @@ function compressThinking(messages: Record<string, unknown>[]) {
 
 // ─── Layer 3: Aggressive Purification ───────────────────────────────────────
 
-function purifyHistory(messages: Record<string, unknown>[], targetTokens: number) {
+interface HistoryCheckpoint {
+  dropped: number;
+  anchorHash: string;
+  targetTokens: number;
+  reuseMaxTokens: number;
+  touchedAt: number;
+}
+
+const historyCheckpoints = new Map<string, HistoryCheckpoint>();
+const HISTORY_CHECKPOINT_MAX = 256;
+const HISTORY_CHECKPOINT_TTL_MS = 15 * 60 * 1000;
+
+function checkpointAnchor(message: Record<string, unknown>): string {
+  return createHash("sha256").update(JSON.stringify(message)).digest("hex");
+}
+
+function saveHistoryCheckpoint(key: string, checkpoint: HistoryCheckpoint): void {
+  historyCheckpoints.delete(key);
+  historyCheckpoints.set(key, checkpoint);
+  while (historyCheckpoints.size > HISTORY_CHECKPOINT_MAX) {
+    const oldest = historyCheckpoints.keys().next().value;
+    if (oldest === undefined) break;
+    historyCheckpoints.delete(oldest);
+  }
+}
+
+function purifyHistory(
+  messages: Record<string, unknown>[],
+  targetTokens: number,
+  cacheSessionKey?: string,
+  cacheReuseMaxTokens?: number
+) {
   // Keep system message(s) and the last N message pairs
   const system = messages.filter((m) => m.role === "system" || m.role === "developer");
   const nonSystem = messages.filter((m) => m.role !== "system" && m.role !== "developer");
 
-  // Binary search for how many messages to keep from the end
-  let keep = nonSystem.length;
-  while (keep > 2) {
+  const candidateFor = (keep: number) => {
     let candidate = [...system, ...nonSystem.slice(-keep)];
     candidate = fixToolPairs(candidate);
     candidate = fixToolAdjacency(candidate);
     // Re-run pair fix: fixToolAdjacency may have stripped tool_use blocks, leaving
     // orphan tool_results that Claude rejects ("tool_result without preceding tool_use").
     candidate = fixToolPairs(candidate);
-    candidate = stripTrailingAssistantOrphanToolUse(candidate);
-    // #8594: measure the candidate structure directly so image-bearing turns are not
-    // over-counted and pruned during the binary search.
-    const tokens = estimateTokens(candidate);
-    if (tokens <= targetTokens) break;
-    keep = Math.max(2, Math.floor(keep * 0.7)); // Drop 30% each iteration
+    return stripTrailingAssistantOrphanToolUse(candidate);
+  };
+
+  const reuseLimit =
+    Number.isFinite(cacheReuseMaxTokens) && cacheReuseMaxTokens! > targetTokens
+      ? Math.floor(cacheReuseMaxTokens!)
+      : targetTokens;
+  const checkpoint = cacheSessionKey ? historyCheckpoints.get(cacheSessionKey) : undefined;
+  let keep = nonSystem.length;
+  let result: Record<string, unknown>[] | null = null;
+  if (
+    checkpoint &&
+    Date.now() - checkpoint.touchedAt < HISTORY_CHECKPOINT_TTL_MS &&
+    checkpoint.targetTokens === targetTokens &&
+    checkpoint.reuseMaxTokens === reuseLimit &&
+    checkpoint.dropped < nonSystem.length &&
+    checkpointAnchor(nonSystem[checkpoint.dropped]) === checkpoint.anchorHash
+  ) {
+    const retained = candidateFor(nonSystem.length - checkpoint.dropped);
+    if (estimateTokens(retained) <= reuseLimit) {
+      keep = nonSystem.length - checkpoint.dropped;
+      result = retained;
+      saveHistoryCheckpoint(cacheSessionKey!, { ...checkpoint, touchedAt: Date.now() });
+    }
   }
 
-  let result = [...system, ...nonSystem.slice(-keep)];
-  result = fixToolPairs(result);
-  result = fixToolAdjacency(result);
-  // Re-run pair fix to drop any tool_result whose matching tool_use was removed by
-  // fixToolAdjacency (discussion #2410 — orphan tool_result -> upstream 400).
-  result = fixToolPairs(result);
-  result = stripTrailingAssistantOrphanToolUse(result);
+  if (!result) {
+    // A new checkpoint fits the proactive target, leaving room for subsequent
+    // turns before another history cut invalidates the provider's cached prefix.
+    while (keep > 2) {
+      const candidate = candidateFor(keep);
+      // #8594: measure the candidate structure directly so image-bearing turns are not
+      // over-counted and pruned during the search.
+      if (estimateTokens(candidate) <= targetTokens) break;
+      keep = Math.max(2, Math.floor(keep * 0.7)); // Drop 30% each iteration
+    }
+    result = candidateFor(keep);
+    const dropped = nonSystem.length - keep;
+    if (cacheSessionKey && dropped > 0 && nonSystem[dropped]) {
+      saveHistoryCheckpoint(cacheSessionKey, {
+        dropped,
+        anchorHash: checkpointAnchor(nonSystem[dropped]),
+        targetTokens,
+        reuseMaxTokens: reuseLimit,
+        touchedAt: Date.now(),
+      });
+    }
+  }
 
   // Add summary of dropped messages. Merge the notice INTO the leading
   // system/developer message instead of splicing a second system-role message
