@@ -68,6 +68,22 @@ const _keyHealth = new Map<string, KeyHealth>();
 
 const FAILURE_THRESHOLD = 2; // Mark as invalid after 2 consecutive failures
 
+// An `invalid` mark older than this window stops blocking the key: normal
+// rotation re-probes it, and a genuinely dead credential re-marks itself
+// invalid on its first failure. Without this, a key invalidated while the
+// credential-health scheduler is disabled (OMNIROUTE_DISABLE_CREDENTIAL_
+// HEALTH_CHECK=1) can never recover — the rotator skips it, so no request
+// ever records the success that would clear it, and the dashboard re-alerts
+// on it forever (incident 2026-09-28: a month-old stale flag).
+const STALE_INVALID_REPROBE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isStaleInvalid(health: KeyHealth): boolean {
+  if (health.status !== "invalid" || !health.lastFailure) return false;
+  const lastFailureAt = Date.parse(health.lastFailure);
+  if (!Number.isFinite(lastFailureAt)) return false;
+  return Date.now() - lastFailureAt > STALE_INVALID_REPROBE_MS;
+}
+
 /**
  * Get or create health status for a specific key within a connection scope.
  */
@@ -114,7 +130,7 @@ export function getValidApiKey(
   // Add primary key if valid
   if (primaryKey) {
     const primaryHealth = health?.["primary"] || getOrCreateHealth(connectionId, "primary");
-    if (primaryHealth.status !== "invalid") {
+    if (primaryHealth.status !== "invalid" || isStaleInvalid(primaryHealth)) {
       allKeys.push({ key: primaryKey, keyId: "primary" });
     } else {
       console.warn(
@@ -127,7 +143,7 @@ export function getValidApiKey(
   for (let i = 0; i < validExtras.length; i++) {
     const keyId = `extra_${i}`;
     const keyHealth = health?.[keyId] || getOrCreateHealth(connectionId, keyId);
-    if (keyHealth.status !== "invalid") {
+    if (keyHealth.status !== "invalid" || isStaleInvalid(keyHealth)) {
       allKeys.push({ key: validExtras[i], keyId });
     }
   }

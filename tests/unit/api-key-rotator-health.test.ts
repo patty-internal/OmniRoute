@@ -662,4 +662,62 @@ describe("A3 Guard Integration Test", () => {
     // chat.ts would call markAccountUnavailable here
     // This is the expected behavior: disable the connection
   });
+
+  describe("stale invalid re-probe", () => {
+    // Production incident 2026-09-28: the credential-health scheduler is
+    // disabled on prod, so an invalid key could never be revalidated — it was
+    // skipped forever while the dashboard re-alerted on it for a month. An
+    // `invalid` mark older than the re-probe window must become eligible
+    // again (a truly dead key re-marks itself invalid on first use).
+    const DAY = 24 * 60 * 60 * 1000;
+
+    function healthWith(status: KeyHealth["status"], lastFailure: string | null) {
+      return {
+        primary: {
+          status,
+          failures: 5,
+          lastFailure,
+          lastSuccess: null,
+          totalRequests: 5,
+          totalFailures: 5,
+        } satisfies KeyHealth,
+      };
+    }
+
+    it("re-probes an invalid key whose last failure is older than 7 days", () => {
+      const result = getValidApiKey(
+        "stale-conn-1",
+        "pk-stale",
+        [],
+        healthWith("invalid", new Date(Date.now() - 8 * DAY).toISOString())
+      );
+      assert.equal(result?.keyId, "primary");
+      assert.equal(result?.key, "pk-stale");
+    });
+
+    it("still skips an invalid key whose last failure is recent", () => {
+      const result = getValidApiKey(
+        "stale-conn-2",
+        "pk-recent",
+        [],
+        healthWith("invalid", new Date(Date.now() - 1 * DAY).toISOString())
+      );
+      assert.equal(result, null);
+    });
+
+    it("still skips an invalid key with no lastFailure timestamp", () => {
+      const result = getValidApiKey("stale-conn-3", "pk-null", [], healthWith("invalid", null));
+      assert.equal(result, null);
+    });
+
+    it("keeps serving a warning key regardless of age", () => {
+      const result = getValidApiKey(
+        "stale-conn-4",
+        "pk-warn",
+        [],
+        healthWith("warning", new Date(Date.now() - 30 * DAY).toISOString())
+      );
+      assert.equal(result?.keyId, "primary");
+    });
+  });
 });
