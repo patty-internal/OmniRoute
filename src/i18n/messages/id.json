@@ -11497,6 +11497,8 @@
     "globalProxy": "Proksi Global",
     "globalProxyDesc": "Konfigurasikan proksi keluar global untuk semua panggilan API. Penyedia individual, kombo, dan kunci dapat mengesampingkan hal ini.",
     "globalSystemPrompt": "Perintah Sistem Global",
+    "systemPromptLoadFailed": "Gagal memuat pengaturan Prompt Sistem Global. Prompt yang tersimpan tidak berubah.",
+    "systemPromptSaveFailed": "Gagal menyimpan Prompt Sistem Global. Periksa koneksi Anda dan coba lagi.",
     "guest": "Tamu",
     "headroomProxyDesc": "URL proxy Headroom penghemat token yang opsional. Jika kosong, gunakan HEADROOM_URL atau http://localhost:8787.",
     "headroomProxyExternalHint": "URL ini bukan loopback, sehingga OmniRoute tidak akan menjalankan CLI lokal.",

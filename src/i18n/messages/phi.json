@@ -11496,6 +11496,8 @@
     "globalProxy": "Pandaigdigang Proxy",
     "globalProxyDesc": "Mag-configure ng pandaigdigang papalabas na proxy para sa lahat ng tawag sa API. Maaaring i-override ito ng mga indibidwal na provider, combo, at key.",
     "globalSystemPrompt": "Pangkalahatang System Prompt",
+    "systemPromptLoadFailed": "Nabigong i-load ang mga setting ng Global System Prompt. Hindi nabago ang mga na-save mong prompt.",
+    "systemPromptSaveFailed": "Nabigong i-save ang Global System Prompt. Suriin ang koneksyon at subukan muli.",
     "guest": "panauhin",
     "headroomProxyDesc": "URL ng opsyonal na Headroom token-saver proxy. Kapag walang laman, gagamitin ang HEADROOM_URL o http://localhost:8787.",
     "headroomProxyExternalHint": "Hindi loopback ang URL na ito, kaya hindi sisimulan ng OmniRoute ang lokal na CLI.",

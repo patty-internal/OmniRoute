@@ -138,6 +138,7 @@ if [ "$FORCE" = false ]; then
     fail "gh CLI not found — cannot verify the CI build. Install gh or pass --force (digest check still applies)."
     exit 1
   fi
+  WAIT_POLLS=0
   while :; do
     STATE="$(ci_state || true)"
     case "$STATE" in
@@ -147,6 +148,11 @@ if [ "$FORCE" = false ]; then
         ;;
       "")
         if [ "$WAIT" = true ]; then
+          WAIT_POLLS=$((WAIT_POLLS + 1))
+          if [ "$WAIT_POLLS" -ge 60 ]; then
+            fail "No CI run for ${SHORT_SHA} after ~20 minutes of polling — giving up."
+            exit 1
+          fi
           info "No CI run for ${SHORT_SHA} yet — waiting..."
           sleep 20
         else
@@ -156,6 +162,11 @@ if [ "$FORCE" = false ]; then
         ;;
       *in_progress*|*queued*|*pending*)
         if [ "$WAIT" = true ]; then
+          WAIT_POLLS=$((WAIT_POLLS + 1))
+          if [ "$WAIT_POLLS" -ge 60 ]; then
+            fail "CI build for ${SHORT_SHA} still ${STATE} after ~20 minutes of polling — giving up."
+            exit 1
+          fi
           info "CI ${STATE} — waiting..."
           sleep 20
         else

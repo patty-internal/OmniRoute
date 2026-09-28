@@ -11496,6 +11496,8 @@
     "globalProxy": "Globalne proxy",
     "globalProxyDesc": "Konfiguracja globalnego proxy wychodzącego dla wszystkich wywołań API. Poszczególni providers, combos i klucze mogą to nadpisać.",
     "globalSystemPrompt": "Globalny prompt systemowy",
+    "systemPromptLoadFailed": "Nie udało się wczytać ustawień globalnego promptu systemowego. Twoje zapisane prompty nie zostały zmienione.",
+    "systemPromptSaveFailed": "Nie udało się zapisać globalnego promptu systemowego. Sprawdź połączenie i spróbuj ponownie.",
     "guest": "Gość",
     "headroomProxyDesc": "Adres URL opcjonalnego serwera proxy Headroom do oszczędzania tokenów. Jeśli pole jest puste, używana jest wartość HEADROOM_URL lub http://localhost:8787.",
     "headroomProxyExternalHint": "Ten adres URL nie jest adresem pętli zwrotnej, więc OmniRoute nie uruchomi lokalnie narzędzia CLI.",

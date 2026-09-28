@@ -6997,6 +6997,8 @@
     "globalLabel": "Globali",
     "configure": "Ikkonfigura",
     "globalSystemPrompt": "Prompt tas-Sistema Globali",
+    "systemPromptLoadFailed": "Naqset it-tagħbijiet tas-settings tal-Prompt tas-Sistema Globli. Il-prompts li ssalvajt ma nbidlux.",
+    "systemPromptSaveFailed": "Naqset is-salvatura tal-Prompt tas-Sistema Globli. Iċċekkja l-konnessjoni u erġa' pprova.",
     "saved": "Issejvjat",
     "beforePromptLabel": "Qabel il-Prompt",
     "beforePromptDesc": "Injettat qabel l-istruzzjonijiet tas-sistema tal-aġent/fornitur",

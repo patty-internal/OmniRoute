@@ -11496,6 +11496,8 @@
     "globalProxy": "全局代理",
     "globalProxyDesc": "为所有 API 调用配置全局出站代理。单独的提供者、组合和键可以覆盖此设置。",
     "globalSystemPrompt": "全局系统提示",
+    "systemPromptLoadFailed": "加载全局系统提示词设置失败。您已保存的提示词未被更改。",
+    "systemPromptSaveFailed": "保存全局系统提示词失败。请检查网络连接后重试。",
     "guest": "嘉宾",
     "headroomProxyDesc": "可选 Headroom 令牌节省代理的 URL。留空时使用 HEADROOM_URL 或 http://localhost:8787。",
     "headroomProxyExternalHint": "此 URL 不是回环地址，因此 OmniRoute 不会启动本地 CLI。",

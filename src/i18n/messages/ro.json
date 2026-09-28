@@ -11496,6 +11496,8 @@
     "globalProxy": "Proxy global",
     "globalProxyDesc": "Configurați un proxy global de ieșire pentru toate apelurile API. Furnizorii individuali, combo-urile și cheile pot suprascrie acest lucru.",
     "globalSystemPrompt": "Prompt global de sistem",
+    "systemPromptLoadFailed": "Încărcarea setărilor promptului global de sistem a eșuat. Prompturile dvs. salvate nu au fost modificate.",
+    "systemPromptSaveFailed": "Salvarea promptului global de sistem a eșuat. Verificați conexiunea și încercați din nou.",
     "guest": "Oaspete",
     "headroomProxyDesc": "URL-ul proxy-ului opțional Headroom pentru economisirea tokenurilor. Dacă este gol, se utilizează HEADROOM_URL sau http://localhost:8787.",
     "headroomProxyExternalHint": "Acest URL nu este loopback, așadar OmniRoute nu va porni CLI-ul local.",

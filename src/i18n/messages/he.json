@@ -11497,6 +11497,8 @@
     "globalProxy": "פרוקסי גלובלי",
     "globalProxyDesc": "הגדר פרוקסי יוצא גלובלי עבור כל קריאות ה-API. ספקים בודדים, שילובים ומפתחות יכולים לעקוף זאת.",
     "globalSystemPrompt": "הודעת מערכת גלובלית",
+    "systemPromptLoadFailed": "טעינת הגדרות הפרומפט המערכתי הגלובלי נכשלה. הפרומפטים השמורים שלך לא השתנו.",
+    "systemPromptSaveFailed": "שמירת הפרומפט המערכתי הגלובלי נכשלה. בדוק את החיבור ונסה שוב.",
     "guest": "אורח",
     "headroomProxyDesc": "כתובת ה-URL של פרוקסי Headroom האופציונלי לחיסכון בטוקנים. אם השדה ריק, ייעשה שימוש ב-HEADROOM_URL או ב-http://localhost:8787.",
     "headroomProxyExternalHint": "כתובת URL זו אינה loopback, ולכן OmniRoute לא יפעיל את ה-CLI המקומי.",

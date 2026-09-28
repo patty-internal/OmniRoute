@@ -6997,6 +6997,8 @@
     "globalLabel": "Na gaba ɗaya",
     "configure": "Saita",
     "globalSystemPrompt": "Umarnin Tsari na Gaba ɗaya",
+    "systemPromptLoadFailed": "An kasa load saitunan tsarin prompt na duniya. Ba a canza prompts da ka ajiya ba.",
+    "systemPromptSaveFailed": "An kasa ajiye tsarin prompt na duniya. Duba hanyar sadarwarka ka sake gwadawa.",
     "saved": "An adana",
     "beforePromptLabel": "Umarnin Kafin",
     "beforePromptDesc": "Ana saka shi kafin umarnin tsarin agent/provider",

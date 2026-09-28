@@ -11497,6 +11497,8 @@
     "globalProxy": "Proxy global",
     "globalProxyDesc": "Configure un proxy saliente global para todas las llamadas API. Los proveedores individuales, los combos y las claves pueden anular esto.",
     "globalSystemPrompt": "Aviso del sistema global",
+    "systemPromptLoadFailed": "No se pudo cargar la configuración del prompt de sistema global. Tus prompts guardados no se modificaron.",
+    "systemPromptSaveFailed": "No se pudo guardar el prompt de sistema global. Comprueba tu conexión e inténtalo de nuevo.",
     "guest": "Invitado",
     "headroomProxyDesc": "URL del proxy opcional de ahorro de tokens Headroom. Si se deja vacío, usa HEADROOM_URL o http://localhost:8787.",
     "headroomProxyExternalHint": "Esta URL no es de bucle invertido, por lo que OmniRoute no iniciará la CLI local.",

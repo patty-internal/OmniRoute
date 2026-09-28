@@ -6997,6 +6997,8 @@
     "globalLabel": "Izugbe",
     "configure": "Hazie",
     "globalSystemPrompt": "Ntuziaka Sistemụ Izugbe",
+    "systemPromptLoadFailed": "Oliteghị ibugharachi ntọala nke okwu sistemụ zuru ụwa ọnụ. Okwu ọ gbachitere agbanweghị.",
+    "systemPromptSaveFailed": "O nweghị ike ichekwa okwu sistemụ zuru ụwa ọnụ. Lelee njikọ gị ma nwaa ọzọ.",
     "saved": "Echekwara",
     "beforePromptLabel": "Ntuziaka Tupu",
     "beforePromptDesc": "A na-etinye ya tupu ntuziaka sistemụ nke agent/provider",

@@ -11497,6 +11497,8 @@
     "globalProxy": "Globális proxy",
     "globalProxyDesc": "Konfiguráljon egy globális kimenő proxyt az összes API-híváshoz. Az egyes szolgáltatók, kombinációk és kulcsok ezt felülírhatják.",
     "globalSystemPrompt": "Globális rendszerprompt",
+    "systemPromptLoadFailed": "Nem sikerült betölteni a globális rendszerprompt beállításait. A mentett promptjai nem módosultak.",
+    "systemPromptSaveFailed": "A globális rendszerprompt mentése nem sikerült. Ellenőrizze a kapcsolatot, és próbálja újra.",
     "guest": "Vendég",
     "headroomProxyDesc": "Az opcionális Headroom tokenmegtakarító proxy URL-je. Üresen hagyva a HEADROOM_URL vagy a http://localhost:8787 lesz használva.",
     "headroomProxyExternalHint": "Ez az URL nem visszacsatolási cím, ezért az OmniRoute nem indítja el a helyi CLI-t.",

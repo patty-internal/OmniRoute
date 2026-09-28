@@ -6997,6 +6997,8 @@
     "globalLabel": "Globaalne",
     "configure": "Seadista",
     "globalSystemPrompt": "Globaalne süsteemiviip",
+    "systemPromptLoadFailed": "Globaalse süsteemipäringu sätete laadimine ebaõnnestus. Teie salvestatud päringud ei muutunud.",
+    "systemPromptSaveFailed": "Globaalse süsteemipäringu salvestamine ebaõnnestus. Kontrollige ühendust ja proovige uuesti.",
     "saved": "Salvestatud",
     "beforePromptLabel": "Enne viipa",
     "beforePromptDesc": "Lisatakse enne agendi/teenusepakkuja süsteemijuhiseid",

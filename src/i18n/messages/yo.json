@@ -6997,6 +6997,8 @@
     "globalLabel": "Àgbáyé",
     "configure": "Ṣètò",
     "globalSystemPrompt": "Ìtọ́ni Ètò Àgbáyé",
+    "systemPromptLoadFailed": "Kò tí i ṣaṣeyọrí láti fi àwọn ìtòsọ̀nà ẹ̀rọ àgbáyé kalẹ̀. Àwọn ìtòsọ̀nà tí o fi pamọ́ kò níyí.",
+    "systemPromptSaveFailed": "Kò tí i ṣaṣeyọrí láti fi ẹ̀rọ àgbáyé pamọ́. Ṣàyẹ̀wò asopọ̀ rẹ kí o tún gbiyanjù.",
     "saved": "Ti fipamọ́",
     "beforePromptLabel": "Ṣáájú Ìtọ́ni",
     "beforePromptDesc": "A fi í ṣáájú àwọn ìtọ́ni ètò aṣojú/olùpèsè",

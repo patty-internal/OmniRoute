@@ -6997,6 +6997,8 @@
     "globalLabel": "Globalno",
     "configure": "Konfiguriraj",
     "globalSystemPrompt": "Globalni sistemski poziv",
+    "systemPromptLoadFailed": "Nalaganje nastavitev globalnega sistemskega poziva ni uspelo. Vaši shranjeni pozivi niso spremenjeni.",
+    "systemPromptSaveFailed": "Shranjevanje globalnega sistemskega poziva ni uspelo. Preverite povezavo in poskusite znova.",
     "saved": "Shranjeno",
     "beforePromptLabel": "Pred pozivom",
     "beforePromptDesc": "Vstavljeno pred sistemska navodila agenta/ponudnika",

@@ -6997,6 +6997,8 @@
     "globalLabel": "Visuotinis",
     "configure": "Konfigūruoti",
     "globalSystemPrompt": "Visuotinė sistemos instrukcija",
+    "systemPromptLoadFailed": "Nepavyko įkelti globalių sistemos raginimų nustatymų. Jūsų išsaugoti raginimai nepasikeitė.",
+    "systemPromptSaveFailed": "Nepavyko išsaugoti globalaus sistemos raginimo. Patikrinkite ryšį ir pabandykite dar kartą.",
     "saved": "Išsaugota",
     "beforePromptLabel": "Prieš užklausą",
     "beforePromptDesc": "Įterpiama prieš agento / teikėjo sistemos instrukcijas",

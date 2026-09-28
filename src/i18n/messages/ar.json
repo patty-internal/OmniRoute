@@ -11497,6 +11497,8 @@
     "globalProxy": "بروكسي العالمي",
     "globalProxyDesc": "قم بتكوين بروكسي خارجي عالمي لجميع مكالمات API. يمكن للموفرين الفرديين والمجموعات والمفاتيح تجاوز هذا.",
     "globalSystemPrompt": "موجه النظام العالمي",
+    "systemPromptLoadFailed": "تعذّر تحميل إعدادات موجه النظام العام. لم يتم تغيير الموجهات المحفوظة لديك.",
+    "systemPromptSaveFailed": "تعذّر حفظ موجه النظام العام. تحقق من اتصالك وحاول مرة أخرى.",
     "guest": "ضيف",
     "headroomProxyDesc": "عنوان URL لوكيل Headroom الاختياري لتوفير الرموز. إذا تُرك فارغًا، فسيُستخدم HEADROOM_URL أو http://localhost:8787.",
     "headroomProxyExternalHint": "عنوان URL هذا ليس للاسترجاع الحلقي، لذلك لن يشغّل OmniRoute أداة CLI المحلية.",

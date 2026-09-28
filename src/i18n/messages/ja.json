@@ -11496,6 +11496,8 @@
     "globalProxy": "グローバルプロキシ",
     "globalProxyDesc": "すべての API 呼び出しに対してグローバル送信プロキシを構成します。個々のプロバイダー、コンボ、およびキーはこれをオーバーライドできます。",
     "globalSystemPrompt": "グローバル システム プロンプト",
+    "systemPromptLoadFailed": "グローバルシステムプロンプトの設定を読み込めませんでした。保存済みのプロンプトは変更されていません。",
+    "systemPromptSaveFailed": "グローバルシステムプロンプトを保存できませんでした。接続を確認して、もう一度お試しください。",
     "guest": "ゲスト",
     "headroomProxyDesc": "オプションのHeadroomトークン節約プロキシのURL。空の場合はHEADROOM_URLまたはhttp://localhost:8787を使用します。",
     "headroomProxyExternalHint": "このURLはループバックではないため、OmniRouteはローカルCLIを起動しません。",

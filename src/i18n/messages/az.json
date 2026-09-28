@@ -11497,6 +11497,8 @@
     "globalProxy": "Qlobal proksi",
     "globalProxyDesc": "Bütün API çağırışları üçün qlobal çıxış proksisini konfiqurasiya edin. Ayrı-ayrı provayderlər, kombinasiyalar və açarlar bunu əvəz edə bilər.",
     "globalSystemPrompt": "Qlobal sistem promptu",
+    "systemPromptLoadFailed": "Qlobal sistem sorğusu parametrlərini yükləmək alınmadı. Yadda saxlanmış sorğularınız dəyişmədi.",
+    "systemPromptSaveFailed": "Qlobal sistem sorğusunu yadda saxlamaq alınmadı. Bağlantınızı yoxlayıb yenidən cəhd edin.",
     "guest": "Qonaq",
     "headroomProxyDesc": "İstəyə bağlı, tokenlərə qənaət edən Headroom proksisinin URL-i. Boş saxlanarsa, HEADROOM_URL və ya http://localhost:8787 istifadə olunur.",
     "headroomProxyExternalHint": "Bu URL geri döngə ünvanı deyil, buna görə OmniRoute yerli CLI-ni işə salmayacaq.",

@@ -6997,6 +6997,8 @@
     "globalLabel": "ዓለም አቀፍ",
     "configure": "አዋቅር",
     "globalSystemPrompt": "ዓለም አቀፍ የስርዓት መመሪያ",
+    "systemPromptLoadFailed": "የግሎባል ሲስተም ፕሮምፕት ቅንብሮችን መጫን አልተሳካም። የተቀመጡ ፕሮምፕቶችዎ አልተቀየሩም።",
+    "systemPromptSaveFailed": "ግሎባል ሲስተም ፕሮምፕቱን ማስቀመጥ አልተሳካም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።",
     "saved": "ተቀምጧል",
     "beforePromptLabel": "ከመመሪያው በፊት",
     "beforePromptDesc": "ከወኪል/አቅራቢ የስርዓት መመሪያዎች በፊት ይገባል",

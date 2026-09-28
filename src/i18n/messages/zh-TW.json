@@ -7072,6 +7072,8 @@
     "globalLabel": "全域性",
     "configure": "設定",
     "globalSystemPrompt": "全域性系統提示",
+    "systemPromptLoadFailed": "載入全域系統提示詞設定失敗。您已儲存的提示詞未被變更。",
+    "systemPromptSaveFailed": "儲存全域系統提示詞失敗。請檢查網路連線後再試一次。",
     "saved": "已儲存",
     "beforePromptLabel": "提示詞前置",
     "beforePromptDesc": "注入到代理/提供者系統指令之前",

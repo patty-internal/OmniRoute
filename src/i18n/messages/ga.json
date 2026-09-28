@@ -6997,6 +6997,8 @@
     "globalLabel": "Domhanda",
     "configure": "Cumraigh",
     "globalSystemPrompt": "Pras Córais Domhanda",
+    "systemPromptLoadFailed": "Theip ar lódáil socruithe an phrompait chórais dhomhanda. Níor athraíodh do chuid prompts sábháilte.",
+    "systemPromptSaveFailed": "Theip ar shábháil an phrompait chórais dhomhanda. Seiceáil do nasc agus bain triail eile as.",
     "saved": "Sábháilte",
     "beforePromptLabel": "Roimh an bPras",
     "beforePromptDesc": "Curtha isteach roimh threoracha córais an ghníomhaire/soláthraí",

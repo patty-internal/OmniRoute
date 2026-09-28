@@ -11497,6 +11497,8 @@
     "globalProxy": "Genel Proxy",
     "globalProxyDesc": "Tüm API çağrıları için genel bir çıkış proxy'si yapılandırın. Bireysel sağlayıcılar, kombolar ve anahtarlar bunu geçersiz kılabilir.",
     "globalSystemPrompt": "Genel Sistem İstemi",
+    "systemPromptLoadFailed": "Global sistem istemi ayarları yüklenemedi. Kayıtlı istemleriniz değişmedi.",
+    "systemPromptSaveFailed": "Global sistem istemi kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
     "guest": "Misafir",
     "headroomProxyDesc": "İsteğe bağlı Headroom token tasarrufu proxy'sinin URL'si. Boş bırakılırsa HEADROOM_URL veya http://localhost:8787 kullanılır.",
     "headroomProxyExternalHint": "Bu URL geri döngü adresi değil, dolayısıyla OmniRoute yerel CLI'yi başlatmayacak.",

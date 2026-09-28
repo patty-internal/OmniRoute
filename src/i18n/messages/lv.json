@@ -6997,6 +6997,8 @@
     "globalLabel": "Globāls",
     "configure": "Konfigurēt",
     "globalSystemPrompt": "Globālais sistēmas uzvednes teksts",
+    "systemPromptLoadFailed": "Neizdevās ielādēt globālās sistēmas uzvednes iestatījumus. Jūsu saglabātās uzvednes nav mainītas.",
+    "systemPromptSaveFailed": "Neizdevās saglabāt globālo sistēmas uzvedni. Pārbaudiet savienojumu un mēģiniet vēlreiz.",
     "saved": "Saglabāts",
     "beforePromptLabel": "Pirms uzvednes",
     "beforePromptDesc": "Ievietots pirms aģenta/pakalpojumu sniedzēja sistēmas instrukcijām",

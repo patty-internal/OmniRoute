@@ -6997,6 +6997,8 @@
     "globalLabel": "Globalno",
     "configure": "Konfiguriraj",
     "globalSystemPrompt": "Globalni sistemski upit",
+    "systemPromptLoadFailed": "Učitavanje postavki globalnog sistemskog prompta nije uspjelo. Vaši sačuvani prompti nisu promijenjeni.",
+    "systemPromptSaveFailed": "Spremanje globalnog sistemskog prompta nije uspjelo. Provjerite vezu i pokušajte ponovo.",
     "saved": "Spremljeno",
     "beforePromptLabel": "Prije upita",
     "beforePromptDesc": "Ubačeno prije sistemskih uputa agenta/pružatelja",

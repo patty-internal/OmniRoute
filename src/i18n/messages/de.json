@@ -11497,6 +11497,8 @@
     "globalProxy": "Globaler Proxy",
     "globalProxyDesc": "Konfigurieren Sie einen globalen ausgehenden Proxy für alle API-Aufrufe. Einzelne Anbieter, Kombinationen und Schlüssel können dies außer Kraft setzen.",
     "globalSystemPrompt": "Globale Systemaufforderung",
+    "systemPromptLoadFailed": "Die Einstellungen des globalen Systemprompts konnten nicht geladen werden. Deine gespeicherten Prompts wurden nicht geändert.",
+    "systemPromptSaveFailed": "Der globale Systemprompt konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es erneut.",
     "guest": "Gast",
     "headroomProxyDesc": "URL des optionalen Headroom-Proxys zum Einsparen von Tokens. Wenn leer, wird HEADROOM_URL oder http://localhost:8787 verwendet.",
     "headroomProxyExternalHint": "Diese URL ist keine Loopback-URL, daher startet OmniRoute die lokale CLI nicht.",

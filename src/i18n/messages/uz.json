@@ -6997,6 +6997,8 @@
     "globalLabel": "Global",
     "configure": "Sozlash",
     "globalSystemPrompt": "Global tizim prompti",
+    "systemPromptLoadFailed": "Global tizim so'rovi sozlamalarini yuklashda xatolik. Saqlangan so'rovlaringiz o'zgartirilmadi.",
+    "systemPromptSaveFailed": "Global tizim so'rovini saqlashda xatolik. Ulanishingizni tekshirib, qaytadan urinib ko'ring.",
     "saved": "Saqlandi",
     "beforePromptLabel": "Promptdan oldin",
     "beforePromptDesc": "Agent/provayder tizim ko‘rsatmalaridan oldin kiritiladi",

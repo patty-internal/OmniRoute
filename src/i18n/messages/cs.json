@@ -11497,6 +11497,8 @@
     "globalProxy": "Globální Proxy",
     "globalProxyDesc": "Nastavte globální odchozí proxy pro všechna API volání. Jednotliví poskytovatelé, komba a klíče mohou toto přepsat.",
     "globalSystemPrompt": "Globální systémový Prompt",
+    "systemPromptLoadFailed": "Načtení nastavení globálního systémového promptu se nezdařilo. Vaše uložené prompty nebyly změněny.",
+    "systemPromptSaveFailed": "Uložení globálního systémového promptu se nezdařilo. Zkontrolujte připojení a zkuste to znovu.",
     "guest": "Host",
     "headroomProxyDesc": "URL volitelného proxy serveru Headroom pro úsporu tokenů. Pokud je prázdné, použije se HEADROOM_URL nebo http://localhost:8787.",
     "headroomProxyExternalHint": "Tato adresa URL není adresou zpětné smyčky, takže OmniRoute místní CLI nespustí.",

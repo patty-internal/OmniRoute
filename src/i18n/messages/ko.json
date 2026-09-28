@@ -11496,6 +11496,8 @@
     "globalProxy": "글로벌 프록시",
     "globalProxyDesc": "모든 API 호출에 대해 글로벌 아웃바운드 프록시를 구성합니다. 개별 공급자, 콤보 및 키가 이를 재정의할 수 있습니다.",
     "globalSystemPrompt": "글로벌 시스템 프롬프트",
+    "systemPromptLoadFailed": "전역 시스템 프롬프트 설정을 불러오지 못했습니다. 저장된 프롬프트는 변경되지 않았습니다.",
+    "systemPromptSaveFailed": "전역 시스템 프롬프트를 저장하지 못했습니다. 연결을 확인하고 다시 시도하세요.",
     "guest": "손님",
     "headroomProxyDesc": "선택 사항인 Headroom 토큰 절약 프록시의 URL입니다. 비워 두면 HEADROOM_URL 또는 http://localhost:8787을 사용합니다.",
     "headroomProxyExternalHint": "이 URL은 루프백이 아니므로 OmniRoute가 로컬 CLI를 실행하지 않습니다.",

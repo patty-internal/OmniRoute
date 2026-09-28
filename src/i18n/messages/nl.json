@@ -11496,6 +11496,8 @@
     "globalProxy": "Mondiale proxy",
     "globalProxyDesc": "Configureer een globale uitgaande proxy voor alle API-aanroepen. Individuele providers, combo's en sleutels kunnen dit overschrijven.",
     "globalSystemPrompt": "Globale systeemprompt",
+    "systemPromptLoadFailed": "Kon de instellingen van de globale systeemprompt niet laden. Je opgeslagen prompts zijn niet gewijzigd.",
+    "systemPromptSaveFailed": "Kon de globale systeemprompt niet opslaan. Controleer je verbinding en probeer het opnieuw.",
     "guest": "Gast",
     "headroomProxyDesc": "URL van de optionele Headroom-proxy voor tokenbesparing. Indien leeg, wordt HEADROOM_URL of http://localhost:8787 gebruikt.",
     "headroomProxyExternalHint": "Deze URL is geen loopback-URL, dus OmniRoute zal de lokale CLI niet starten.",

@@ -11496,6 +11496,8 @@
     "globalProxy": "Global proxy",
     "globalProxyDesc": "Konfigurer en global utgående proxy for alle API-kall. Individuelle leverandører, kombinasjoner og nøkler kan overstyre dette.",
     "globalSystemPrompt": "Global systemforespørsel",
+    "systemPromptLoadFailed": "Kunne ikke laste inn innstillingene for den globale systemprompten. Lagrede prompts dine ble ikke endret.",
+    "systemPromptSaveFailed": "Kunne ikke lagre den globale systemprompten. Sjekk tilkoblingen og prøv igjen.",
     "guest": "Gjest",
     "headroomProxyDesc": "URL til den valgfrie Headroom-proxyen for tokensparing. Hvis feltet er tomt, brukes HEADROOM_URL eller http://localhost:8787.",
     "headroomProxyExternalHint": "Denne URL-en er ikke en loopback-adresse, så OmniRoute vil ikke starte den lokale CLI-en.",

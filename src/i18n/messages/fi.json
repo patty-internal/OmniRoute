@@ -11497,6 +11497,8 @@
     "globalProxy": "Globaali välityspalvelin",
     "globalProxyDesc": "Määritä yleinen lähtevä välityspalvelin kaikille API-kutsuille. Yksittäiset palveluntarjoajat, yhdistelmät ja avaimet voivat ohittaa tämän.",
     "globalSystemPrompt": "Globaali järjestelmäkehote",
+    "systemPromptLoadFailed": "Globaalin järjestelmäkehotteen asetuksia ei voitu ladata. Tallennetut kehotteesi eivät muuttuneet.",
+    "systemPromptSaveFailed": "Globaalin järjestelmäkehotteen tallentaminen epäonnistui. Tarkista yhteys ja yritä uudelleen.",
     "guest": "Vieras",
     "headroomProxyDesc": "Valinnaisen, tokeneita säästävän Headroom-välityspalvelimen URL. Jos kenttä jätetään tyhjäksi, käytetään osoitetta HEADROOM_URL tai http://localhost:8787.",
     "headroomProxyExternalHint": "Tämä URL ei ole takaisinkytkentäosoite, joten OmniRoute ei käynnistä paikallista CLI:tä.",

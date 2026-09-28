@@ -11497,6 +11497,8 @@
     "globalProxy": "Proksi ya Jumla",
     "globalProxyDesc": "Sanidi proksi ya jumla ya trafiki yote ya API inayotoka. Watoa huduma binafsi, combos na funguo zinaweza kubatilisha mpangilio huu.",
     "globalSystemPrompt": "Kidokezo cha Mfumo cha Jumla",
+    "systemPromptLoadFailed": "Imeshindwa kupakia mipangilio ya Maelezo ya Mfumo wa Kimataifa. Maelezo yaliyohifadhiwa hayakubadilishwa.",
+    "systemPromptSaveFailed": "Imeshindwa kuhifadhi Maelezo ya Mfumo wa Kimataifa. Angalia muunganisho wako kisha ujaribu tena.",
     "guest": "Mgeni",
     "headroomProxyDesc": "URL ya proksi ya hiari ya Headroom inayookoa tokeni. Ikiwa tupu, hutumia HEADROOM_URL au http://localhost:8787.",
     "headroomProxyExternalHint": "URL hii si ya loopback, kwa hivyo OmniRoute haitaanzisha CLI ya ndani.",
