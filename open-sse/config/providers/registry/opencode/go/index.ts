@@ -327,9 +327,19 @@ export const opencode_goProvider: RegistryEntry = {
     { id: "grok-4.5-low", name: "Grok 4.5 (low effort)", supportsReasoning: true },
     { id: "grok-4.5-medium", name: "Grok 4.5 (medium effort)", supportsReasoning: true },
     { id: "grok-4.5-high", name: "Grok 4.5 (high effort)", supportsReasoning: true },
+    // The gateway serves the DeepSeek V4 family at a 1M window. Without a
+    // per-model contextLength these ids fall through to the provider-wide
+    // defaultContextLength (200000) and the final context gate rejects large
+    // requests with context_length_exceeded while clients advertise 1M.
+    {
+      id: "deepseek-v4.1-flash",
+      name: "DeepSeek V4.1 Flash",
+      contextLength: 1000000,
+    },
     {
       id: "deepseek-v4-pro",
       name: "DeepSeek V4 Pro",
+      contextLength: 1000000,
       supportsReasoning: true,
       supportedThinkingEfforts: ["none", "low", "high", "max"],
       targetFormat: "openai-responses",
@@ -337,6 +347,7 @@ export const opencode_goProvider: RegistryEntry = {
     {
       id: "deepseek-v4-flash",
       name: "DeepSeek V4 Flash",
+      contextLength: 1000000,
       supportsReasoning: true,
       supportedThinkingEfforts: ["none", "low", "high", "max"],
       targetFormat: "openai-responses",
